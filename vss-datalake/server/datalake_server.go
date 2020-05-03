@@ -1,7 +1,7 @@
 /**
 * (C) 2020 Geotab Inc
 *
-* All files and artifacts in the repository at https://xxxxx
+* All files and artifacts in the repository at https://github.com/UlfBj/ccs-w3c-client
 * are licensed under the provisions of the license provided by the LICENSE file in this repository.
 *
 **/
@@ -12,7 +12,7 @@ import (
 	t/http"
 	"net/http"
 
-		//    "encoding/base64"
+	//    "encoding/base64"
 	/ioutil"
 	"
 	rconv"
@@ -22,9 +22,9 @@ import (
 	tabase/sql"
 	t"
 
-		//    "time"
+	//    "time"
 	github.com/mattn/go-sqlite3"
-		//    "github.com/MEAE-GOT/W3C_VehicleSignalInterfaceImpl/utils"
+	//    "github.com/MEAE-GOT/W3C_VehicleSignalInterfaceImpl/utils"
 )
 
 // #include <stdlib.h>
@@ -113,6 +113,22 @@ func writeTvValue(vinId int, uuid string, value string, timestamp string) int {
 	_, err = stmt.Exec(value, timestamp, uuid)
 	checkErr(err)
 	if err != nil {
+		return -1
+	}
+	return 0
+}
+
+func writeTivValue(vinId int, uuid string, value string) int {
+	sqlString := "INSERT INTO TIV " + "(vin_id, value, uuid) values(?, ?, ?)"
+	stmt, err := db.Prepare(sqlString)
+	checkErr(err)
+	if (err != nil) {
+		return -1
+	}
+
+	_, err = stmt.Exec(vinId, value, uuid)
+	checkErr(err)
+	if (err != nil) {
 		return -1
 	}
 	return 0
@@ -393,34 +409,34 @@ func datalakeGetValue(reqMap map[string]interface{}) (string, int) {
 	}
 	path := reqMap["path"].(string)
 	output, matches := getVssDbMapping(path)
-	if matches == 0 {
+	if (matches == 0) {
 		return "", 3
 	}
 	elementStart := 0
 	response := ""
-	if matches > 1 {
+	if (matches > 1) {
 		response = "["
 	}
-	for i := 0; i < matches; i++ {
+	for i := 0 ; i < matches ; i++ {
 		var treeMap = make(map[string]interface{})
 		elementStop := strings.Index(output[elementStart:len(output)], "}")
-		elementStart += strings.Index(output[elementStart+1:len(output)], "{") + 1
+		elementStart += strings.Index(output[elementStart+1:len(output)], "{")+1
 		jsonToMap(output[elementStart:elementStart+elementStop+1], &treeMap)
 		nodetype := treeMap["nodetype"].(string)
 		uuid := treeMap["uuid"].(string)
 		var from string
-		if reqMap["from"] == nil {
+		if (reqMap["from"] == nil) {
 			from = ""
 		} else {
 			from = reqMap["from"].(string)
 		}
 		var to string
-		if reqMap["to"] == nil {
+		if (reqMap["to"] == nil) {
 			to = ""
 		} else {
 			to = reqMap["to"].(string)
 		}
-		if nodetype == "attribute" {
+		if (nodetype == "ATTRIBUTE") {
 			value := readTivValue(vinId, uuid)
 			response += `{ "path":"` + path + `, "value":"` + value + "}, "
 		} else {
@@ -429,7 +445,7 @@ func datalakeGetValue(reqMap map[string]interface{}) (string, int) {
 		}
 	}
 	response = response[:len(response)-2]
-	if matches > 1 {
+	if (matches > 1) {
 		response += "]"
 	}
 	return response, 0
@@ -448,33 +464,43 @@ func datalakeSetValue(reqMap map[string]interface{}) string {
 		return "Value missing"
 	}
 	value := reqMap["value"].(string)
-	if reqMap["timestamp"] == nil {
-		return "Timestamp missing"
+	var timestamp string
+	if reqMap["timestamp"] != nil {
+		timestamp = reqMap["timestamp"].(string)
 	}
-	timestamp := reqMap["timestamp"].(string)
 	output, matches := getVssDbMapping(path)
-	if matches != 1 {
+	if (matches != 1) {
 		return "No matching path"
 	}
 	var dbMap = make(map[string]interface{})
 	jsonToMap(output[1:len(output)-1], &dbMap)
 	uuid := dbMap["uuid"].(string)
+	nodetype := dbMap["nodetype"].(string)
+	//fmt.Printf("nodetype=%s\n", nodetype)
+	if (nodetype != "ATTRIBUTE" && reqMap["timestamp"] == nil) {
+		return "Timestamp missing"
+	}
 	vinId := readVinId(vin)
-	fmt.Printf("First attempt to read vinId=%d\n", vinId)
+	//fmt.Printf("First attempt to read vinId=%d\n", vinId)
 	if vinId == -1 {
 		err := writeVIN(vin)
 		if err != 0 {
 			return "Failed to write VIN"
 		}
 		vinId = readVinId(vin)
-		fmt.Printf("Second attempt to read vinId=%d\n", vinId)
+		//fmt.Printf("Second attempt to read vinId=%d\n", vinId)
 		if vinId == -1 {
 			return "Failed to create VIN entry"
 		}
 		createTvVin(vinId)
 	}
-	err := writeTvValue(vinId, uuid, value, timestamp)
-	if err != 0 {
+	var err int
+	if (nodetype == "ATTRIBUTE") {
+		err = writeTivValue(vinId, uuid, value)
+	} else {
+		err = writeTvValue(vinId, uuid, value, timestamp)
+	}
+	if (err != 0) {
 		return "Failed to store sample"
 	}
 	return "200 OK"
