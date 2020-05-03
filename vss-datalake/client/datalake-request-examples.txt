@@ -1,0 +1,24 @@
+// datalake server command examples
+// HTTP POST on server port no: 8765, path: datalakeserver
+
+**** Request examples ****
+
+{"action":"get", "vin": "YV1DZ8256C2271234", "path":"Vehicle/Cabin/Door/Row1/Left/IsOpen", "from":"2020-01-01T02:59:43.492750Z", "to":"2020-03-31T02:59:43.492750Z"} // get specified period
+{"action":"get", "vin": "YV1DZ8256C2271234", "path":"Vehicle/Cabin/Door/Row1/Left/IsOpen", "from":"2020-01-09T02:59:43.492750Z"}  // get period from boundary up to latest value
+{"action":"get", "vin": "YV1DZ8256C2271234", "path":"Vehicle/Cabin/Door/Row1/Left/IsOpen"}  // get latest value
+
+
+{"action":"set", "vin": "YV1DZ8256C2271234", "path":"Vehicle/Cabin/Door/Row1/Left/IsOpen", "value": "true", "timestamp":"2020-01-10T02:59:43.492Z"}
+{"action":"set", "vin": "YV1DZ8256C2271234", "path":"Vehicle/Cabin/Door/Row1/Left/IsOpen", "value": "false", "timestamp":"2020-01-11T02:59:43.492Z"}
+{"action":"set", "vin": "YV1DZ8256C2271234", "path":"Vehicle/Cabin/Door/Row1/Left/IsOpen", "value": "true", "timestamp":"2020-01-12T02:59:43.492Z"}
+{"action":"set", "vin": "YV1DZ8256C2271234", "path":"Vehicle/Cabin/Door/Row1/Left/IsOpen", "value": "false", "timestamp":"2020-04-01T02:59:43.492Z"}
+
+
+{"action":"getmetadata", "vin": "YV1DZ8256C2271234", "path":"Vehicle/Cabin/Door/", "depth": "2"}
+
+
+**** GET response examples ****
+
+{"datapackage":"{ \"path\":\"Vehicle/Cabin/Door/Row1/Left/IsOpen, \"datapoints\":\"{\"value\": \"false\", \"timestamp\": \"2020-04-01T02:59:43.492Z\"}}"}
+
+{"datapackage":"{ \"path\":\"Vehicle/Cabin/Door/Row1/Left/IsOpen, \"datapoints\":\"[{\"value\": \"true\", \"timestamp\": \"2020-01-10T02:59:43.492Z\"}, {\"value\": \"false\", \"timestamp\": \"2020-01-11T02:59:43.492Z\"}, {\"value\": \"true\", \"timestamp\": \"2020-01-12T02:59:43.492Z\"}, {\"value\": \"false\", \"timestamp\": \"2020-04-01T02:59:43.492Z\"}]}"}
