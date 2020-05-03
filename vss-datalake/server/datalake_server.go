@@ -1,7 +1,7 @@
 /**
 * (C) 2020 Geotab Inc
 *
-* All files and artifacts in the repository at https://xxxxx
+* All files and artifacts in the repository at https://github.com/UlfBj/ccs-w3c-client
 * are licensed under the provisions of the license provided by the LICENSE file in this repository.
 *
 **/
@@ -110,6 +110,22 @@ func writeTvValue(vinId int, uuid string, value string, timestamp string) int {
         }
 
         _, err = stmt.Exec(value, timestamp, uuid)
+        checkErr(err)
+        if (err != nil) {
+            return -1
+        }
+        return 0
+}
+
+func writeTivValue(vinId int, uuid string, value string) int {
+        sqlString := "INSERT INTO TIV " + "(vin_id, value, uuid) values(?, ?, ?)"
+        stmt, err := db.Prepare(sqlString)
+        checkErr(err)
+        if (err != nil) {
+            return -1
+        }
+
+        _, err = stmt.Exec(vinId, value, uuid)
         checkErr(err)
         if (err != nil) {
             return -1
@@ -404,7 +420,7 @@ func datalakeGetValue(reqMap map[string]interface{}) (string, int) {
             } else {
                 to = reqMap["to"].(string)
             }
-            if (nodetype == "attribute") {
+            if (nodetype == "ATTRIBUTE") {
                 value := readTivValue(vinId, uuid)
                 response += `{ "path":"` + path + `, "value":"` + value + "}, "
             } else {
@@ -432,10 +448,10 @@ func datalakeSetValue(reqMap map[string]interface{}) string {
 		return "Value missing"
 	}
         value := reqMap["value"].(string)
-	if reqMap["timestamp"] == nil {
-		return "Timestamp missing"
-	}
-        timestamp := reqMap["timestamp"].(string)
+        var timestamp string
+	if reqMap["timestamp"] != nil {
+            timestamp = reqMap["timestamp"].(string)
+        }
         output, matches := getVssDbMapping(path)
         if (matches != 1) {
             return "No matching path"
@@ -443,21 +459,31 @@ func datalakeSetValue(reqMap map[string]interface{}) string {
         var dbMap = make(map[string]interface{})
         jsonToMap(output[1:len(output)-1], &dbMap)
         uuid := dbMap["uuid"].(string)
+        nodetype := dbMap["nodetype"].(string)
+//fmt.Printf("nodetype=%s\n", nodetype)
+        if (nodetype != "ATTRIBUTE" && reqMap["timestamp"] == nil) {
+            return "Timestamp missing"
+        }
         vinId := readVinId(vin)
-fmt.Printf("First attempt to read vinId=%d\n", vinId)
+//fmt.Printf("First attempt to read vinId=%d\n", vinId)
 	if vinId == -1 {
                 err := writeVIN(vin)
  	        if err != 0 {
 		    return "Failed to write VIN"
                 }
                 vinId = readVinId(vin)
-fmt.Printf("Second attempt to read vinId=%d\n", vinId)
+//fmt.Printf("Second attempt to read vinId=%d\n", vinId)
  	        if vinId == -1 {
 		    return "Failed to create VIN entry"
                 }
                 createTvVin(vinId)
 	}
-        err := writeTvValue(vinId, uuid, value, timestamp)
+        var err int
+        if (nodetype == "ATTRIBUTE") {
+            err = writeTivValue(vinId, uuid, value)
+        } else {
+            err = writeTvValue(vinId, uuid, value, timestamp)
+        }
         if (err != 0) {
             return "Failed to store sample"
         }
