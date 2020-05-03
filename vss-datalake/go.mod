@@ -3,6 +3,6 @@ module github.com/ulfbj/datalake_utils
 go 1.13
 
 //example on how to use replace to point to fork or local path
-replace github.com/ulfbj/datalake_utils => ./datalake_utils
+//replace github.com/ulfbj/datalake_utils => ./datalake_utils
 
 require github.com/mattn/go-sqlite3 v2.0.3+incompatible
