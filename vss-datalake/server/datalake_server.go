@@ -9,21 +9,15 @@
 package main
 
 import (
-	t/http"
+	"database/sql"
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
 	"net/http"
-
-	//    "encoding/base64"
-	/ioutil"
-	"
-	rconv"
-	rings"
-	safe"
-
-	tabase/sql"
-	t"
-
-	//    "time"
-	github.com/mattn/go-sqlite3"
+	"os"
+	"strconv"
+	"strings"
+	"unsafe"
 	//    "github.com/MEAE-GOT/W3C_VehicleSignalInterfaceImpl/utils"
 )
 
@@ -122,13 +116,13 @@ func writeTivValue(vinId int, uuid string, value string) int {
 	sqlString := "INSERT INTO TIV " + "(vin_id, value, uuid) values(?, ?, ?)"
 	stmt, err := db.Prepare(sqlString)
 	checkErr(err)
-	if (err != nil) {
+	if err != nil {
 		return -1
 	}
 
 	_, err = stmt.Exec(vinId, value, uuid)
 	checkErr(err)
-	if (err != nil) {
+	if err != nil {
 		return -1
 	}
 	return 0
@@ -409,34 +403,34 @@ func datalakeGetValue(reqMap map[string]interface{}) (string, int) {
 	}
 	path := reqMap["path"].(string)
 	output, matches := getVssDbMapping(path)
-	if (matches == 0) {
+	if matches == 0 {
 		return "", 3
 	}
 	elementStart := 0
 	response := ""
-	if (matches > 1) {
+	if matches > 1 {
 		response = "["
 	}
-	for i := 0 ; i < matches ; i++ {
+	for i := 0; i < matches; i++ {
 		var treeMap = make(map[string]interface{})
 		elementStop := strings.Index(output[elementStart:len(output)], "}")
-		elementStart += strings.Index(output[elementStart+1:len(output)], "{")+1
+		elementStart += strings.Index(output[elementStart+1:len(output)], "{") + 1
 		jsonToMap(output[elementStart:elementStart+elementStop+1], &treeMap)
 		nodetype := treeMap["nodetype"].(string)
 		uuid := treeMap["uuid"].(string)
 		var from string
-		if (reqMap["from"] == nil) {
+		if reqMap["from"] == nil {
 			from = ""
 		} else {
 			from = reqMap["from"].(string)
 		}
 		var to string
-		if (reqMap["to"] == nil) {
+		if reqMap["to"] == nil {
 			to = ""
 		} else {
 			to = reqMap["to"].(string)
 		}
-		if (nodetype == "ATTRIBUTE") {
+		if nodetype == "ATTRIBUTE" {
 			value := readTivValue(vinId, uuid)
 			response += `{ "path":"` + path + `, "value":"` + value + "}, "
 		} else {
@@ -445,7 +439,7 @@ func datalakeGetValue(reqMap map[string]interface{}) (string, int) {
 		}
 	}
 	response = response[:len(response)-2]
-	if (matches > 1) {
+	if matches > 1 {
 		response += "]"
 	}
 	return response, 0
@@ -469,7 +463,7 @@ func datalakeSetValue(reqMap map[string]interface{}) string {
 		timestamp = reqMap["timestamp"].(string)
 	}
 	output, matches := getVssDbMapping(path)
-	if (matches != 1) {
+	if matches != 1 {
 		return "No matching path"
 	}
 	var dbMap = make(map[string]interface{})
@@ -477,7 +471,7 @@ func datalakeSetValue(reqMap map[string]interface{}) string {
 	uuid := dbMap["uuid"].(string)
 	nodetype := dbMap["nodetype"].(string)
 	//fmt.Printf("nodetype=%s\n", nodetype)
-	if (nodetype != "ATTRIBUTE" && reqMap["timestamp"] == nil) {
+	if nodetype != "ATTRIBUTE" && reqMap["timestamp"] == nil {
 		return "Timestamp missing"
 	}
 	vinId := readVinId(vin)
@@ -495,12 +489,12 @@ func datalakeSetValue(reqMap map[string]interface{}) string {
 		createTvVin(vinId)
 	}
 	var err int
-	if (nodetype == "ATTRIBUTE") {
+	if nodetype == "ATTRIBUTE" {
 		err = writeTivValue(vinId, uuid, value)
 	} else {
 		err = writeTvValue(vinId, uuid, value, timestamp)
 	}
-	if (err != 0) {
+	if err != 0 {
 		return "Failed to store sample"
 	}
 	return "200 OK"
