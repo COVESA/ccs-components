@@ -18,6 +18,7 @@ import (
 	"strconv"
 	"strings"
 	"unsafe"
+	_ "github.com/mattn/go-sqlite3"
 	//    "github.com/MEAE-GOT/W3C_VehicleSignalInterfaceImpl/utils"
 )
 
@@ -70,14 +71,19 @@ func fileExists(filename string) bool {
 }
 
 func InitDb(dbFile string) {
-	db, dbErr = sql.Open("sqlite3", dbFile)
-	checkErr(dbErr)
-	if !fileExists(dbFile) {
+	if fileExists(dbFile) {
+		db, dbErr = sql.Open("sqlite3", dbFile)
+		checkErr(dbErr)
 		err := createStaticTables()
 		if err != 0 {
+			fmt.Printf("\ndatalakeServer: Unable to make static tables : %s\n", err)
 			os.Exit(1)
 		}
+	}else{
+		fmt.Printf("\ndatalakeServer: Please make sure %s exists\n", dbFile)
+		os.Exit(1)
 	}
+
 }
 
 func writeVIN(vin string) int {
@@ -506,6 +512,9 @@ func main() {
 		fmt.Printf("VSS datalake server command line must contain name of database.\n")
 		os.Exit(1)
 	}
+	InitDb(os.Args[1])
+	defer db.Close()
+
 	serverChan := make(chan string)
 	muxServer := http.NewServeMux()
 
@@ -514,8 +523,6 @@ func main() {
 		fmt.Println("VSS tree file not found")
 		os.Exit(1)
 	}
-	InitDb(os.Args[1])
-	defer db.Close()
 	go initDatalakeServer(serverChan, muxServer)
 
 	for {
