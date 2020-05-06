@@ -11,7 +11,6 @@ package main
 import (
     "net/http"
     "encoding/json"
-//    "encoding/base64"
     "io/ioutil"
     "os"
     "strconv"
@@ -20,9 +19,7 @@ import (
 
     "database/sql"
     "fmt"
-//    "time"
     _ "github.com/mattn/go-sqlite3"
-//    "github.com/MEAE-GOT/W3C_VehicleSignalInterfaceImpl/utils"
 )
 
 // #include <stdlib.h>
@@ -54,7 +51,7 @@ func createStaticTables() int {
         _, err = stmt1.Exec()
         checkErr(err)
 
-        stmt2, err2 := db.Prepare(`CREATE TABLE "TIV" ( "vin_id" INTEGER NOT NULL, "uuid" TEXT NOT NULL, "value" TEXT NOT NULL, FOREIGN KEY("vin_id") REFERENCES "VIN_TIV"("vin_id") )`)
+        stmt2, err2 := db.Prepare(`CREATE TABLE "TIV" ( "vin_id" INTEGER NOT NULL, "uuid" TEXT NOT NULL, "value" TEXT, UNIQUE("vin_id", "uuid") ON CONFLICT IGNORE, FOREIGN KEY("vin_id") REFERENCES "VIN_TIV"("vin_id") )`)
         checkErr(err2)
 
         _, err2 = stmt2.Exec()
@@ -118,18 +115,37 @@ func writeTvValue(vinId int, uuid string, value string, timestamp string) int {
 }
 
 func writeTivValue(vinId int, uuid string, value string) int {
-        sqlString := "INSERT INTO TIV " + "(vin_id, value, uuid) values(?, ?, ?)"
+//        sqlString := "INSERT INTO TIV " + "(vin_id, value, uuid) values(?, ?, ?)"
+        sqlString := "INSERT INTO TIV (vin_id, uuid) VALUES(?, ?)"
         stmt, err := db.Prepare(sqlString)
         checkErr(err)
         if (err != nil) {
+fmt.Printf("writeTivValue:prepare-INSERT OR IGNORE error\n")
             return -1
         }
 
-        _, err = stmt.Exec(vinId, value, uuid)
+        _, err = stmt.Exec(vinId, uuid)
         checkErr(err)
         if (err != nil) {
+fmt.Printf("writeTivValue:exec-INSERT OR IGNORE error\n")
             return -1
         }
+
+        sqlString = "UPDATE TIV SET `value`=? WHERE `vin_id`=? AND `uuid`=?"
+        stmt, err = db.Prepare(sqlString)
+        checkErr(err)
+        if (err != nil) {
+fmt.Printf("writeTivValue:prepare-UPDATE error\n")
+            return -1
+        }
+
+        _, err = stmt.Exec(value, vinId, uuid)
+        checkErr(err)
+        if (err != nil) {
+fmt.Printf("writeTivValue:exec-UPDATE error\n")
+            return -1
+        }
+
         return 0
 }
 
@@ -269,7 +285,7 @@ func makeDatalakeServerHandler(serverChannel chan string) func(http.ResponseWrit
 }
 
 func initDatalakeServer(serverChannel chan string, muxServer *http.ServeMux) {
-	fmt.Printf("initAtServer(): :8765/datalakeserver")
+	fmt.Printf("initDatalakeServer(): :8765/datalakeserver")
 	agtServerHandler := makeDatalakeServerHandler(serverChannel)
 	muxServer.HandleFunc("/datalakeserver", agtServerHandler)
 	fmt.Println(http.ListenAndServe(":8765", muxServer))
