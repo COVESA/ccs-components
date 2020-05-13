@@ -1,6 +1,6 @@
 The CCS client is started as shown in the command line example below
 
-$ ./ccs-client nodelist-filename gen2-server-url datalake-server-url vss-tree-filename vin sleeptime
+$ ./ccs-client nodelist-filename gen2-server-url ovds-server-url vss-tree-filename vin sleeptime
 An example could look like:<br>
 $ ./client nodelist.txt gen2_server.w3.org 192.168.8.108 ../server/vss_rel_2.0.0-alpha+006.cnative GEO001 30
 

@@ -256,10 +256,10 @@ func createTvVin(vinId int) {
         checkErr(err)
 }
 
-func makeDatalakeServerHandler(serverChannel chan string) func(http.ResponseWriter, *http.Request) {
+func makeOVDSServerHandler(serverChannel chan string) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
-		fmt.Printf("datalakeServer:url=%s", req.URL.Path)
-		if req.URL.Path != "/datalakeserver" {
+		fmt.Printf("OVDSServer:url=%s", req.URL.Path)
+		if req.URL.Path != "/ovdsserver" {
 			http.Error(w, "404 url path not found.", 404)
 		} else if req.Method != "POST" {
 			http.Error(w, "400 bad request method.", 400)
@@ -268,10 +268,10 @@ func makeDatalakeServerHandler(serverChannel chan string) func(http.ResponseWrit
                         if err != nil {
                                 http.Error(w, "400 request unreadable.", 400)
                         } else {
-				fmt.Printf("datalakeserver:received POST request=%s\n", string(bodyBytes))
+				fmt.Printf("OVDSserver:received POST request=%s\n", string(bodyBytes))
 				serverChannel <- string(bodyBytes)
 				response := <- serverChannel
-				fmt.Printf("datalakeserver:POST response=%s", response)
+				fmt.Printf("OVDSserver:POST response=%s", response)
                                 if (len(response) == 0) {
                                     http.Error(w, "400 bad input.", 400)
                                 } else {
@@ -284,10 +284,10 @@ func makeDatalakeServerHandler(serverChannel chan string) func(http.ResponseWrit
 	}
 }
 
-func initDatalakeServer(serverChannel chan string, muxServer *http.ServeMux) {
-	fmt.Printf("initDatalakeServer(): :8765/datalakeserver")
-	agtServerHandler := makeDatalakeServerHandler(serverChannel)
-	muxServer.HandleFunc("/datalakeserver", agtServerHandler)
+func initOVDSServer(serverChannel chan string, muxServer *http.ServeMux) {
+	fmt.Printf("initOVDSServer(): :8765/ovdsserver")
+	agtServerHandler := makeOVDSServerHandler(serverChannel)
+	muxServer.HandleFunc("/ovdsserver", agtServerHandler)
 	fmt.Println(http.ListenAndServe(":8765", muxServer))
 }
 
@@ -395,7 +395,7 @@ fmt.Printf("matches=%d\n", int(matches))
 	return dbMap, int(matches)
 }
 
-func datalakeGetValue(reqMap map[string]interface{}) (string, int) {
+func OVDSGetValue(reqMap map[string]interface{}) (string, int) {
 	if reqMap["vin"] == nil {
 		return "", 1
 	}
@@ -451,7 +451,7 @@ func datalakeGetValue(reqMap map[string]interface{}) (string, int) {
         return response, 0
 }
 
-func datalakeSetValue(reqMap map[string]interface{}) string {
+func OVDSSetValue(reqMap map[string]interface{}) string {
 	if reqMap["vin"] == nil {
 		return "VIN missing"
 	}
@@ -509,7 +509,7 @@ func datalakeSetValue(reqMap map[string]interface{}) string {
 func main() {
 
         if (len(os.Args) != 2) {
-            fmt.Printf("VSS datalake server command line must contain name of database.\n")
+            fmt.Printf("OVDS server command line must contain name of database.\n")
             os.Exit(1)
         }
 	serverChan := make(chan string)
@@ -522,7 +522,7 @@ func main() {
 	}
         InitDb(os.Args[1])
         defer db.Close()
-        go initDatalakeServer(serverChan, muxServer)
+        go initOVDSServer(serverChan, muxServer)
 
 	for {
 		select {
@@ -535,7 +535,7 @@ func main() {
 //			responseMap["action"] = requestMap["action"]
 			switch requestMap["action"] {
 			case "get":
-				responseMap["datapackage"], err = datalakeGetValue(requestMap)
+				responseMap["datapackage"], err = OVDSGetValue(requestMap)
                                 if (err != 0) {
                                        switch err {
                                        case 1:
@@ -552,12 +552,12 @@ func main() {
                                 }
 			        serverChan <- finalizeMessage(responseMap)
 			case "set":
-				responseMap["status"] = datalakeSetValue(requestMap)
+				responseMap["status"] = OVDSSetValue(requestMap)
 			        serverChan <- finalizeMessage(responseMap)
 			case "getmetadata":
-//				responseMap["metadata"] = datalakeGetMetadata(requestMap)
+//				responseMap["metadata"] = OVDSGetMetadata(requestMap)
 //			        serverChan <- finalizeMessage(responseMap)
-                                fallthrough   //until datalakeGetMetadata implemented
+                                fallthrough   //until OVDSGetMetadata implemented
 			default:
 		                setErrorResponse(requestMap, errorResponseMap, "400", "Unknown action.", "Supported actions: set/set/getmetadata")
 			        serverChan <- finalizeMessage(errorResponseMap)

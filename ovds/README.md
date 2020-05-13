@@ -1,13 +1,13 @@
-The datalake server takes a database file name as command line input, as the examle shows below.
+The Open Vehicle Data Set (OVDS) server takes a database file name as command line input, as the examle shows below.
 
-$ ./datalake_server path-to-file/vss-datalake.db
+$ ./ovds_server path-to-file/ovds.db
 
 If the file does not exist, it creates an SQLite database with the provided name, and creates the tables:
 
 CREATE TABLE "VIN_TIV" ( "vin_id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, "vin" TEXT NOT NULL )
 CREATE TABLE "TIV" ( "vin_id" INTEGER NOT NULL, "uuid" TEXT NOT NULL, "value" TEXT NOT NULL, FOREIGN KEY("vin_id") REFERENCES "VIN_TIV"("vin_id") )
 
-The server supports the methods get/set/getmetadata. These methods are requested by the client via HTTP POST, with a JSON payload that specifies which method is requested, and the accompanying input parameters, see examples below (also found in datalake-request-examples.txt).
+The server supports the methods get/set/getmetadata. These methods are requested by the client via HTTP POST, with a JSON payload that specifies which method is requested, and the accompanying input parameters, see examples below (also found in ovds-request-examples.txt).
 
 
 {"action":"get", "vin": "YV1DZ8256C2271234", "path":"Vehicle/Cabin/Door/Row1/Left/IsOpen", "from":"2020-01-01T02:59:43.492750Z", "to":"2020-03-31T02:59:43.492750Z"} // get specified period<br>
