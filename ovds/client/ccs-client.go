@@ -30,7 +30,7 @@ import "C"
 var VSSTreeRoot C.long
 
 var gen2Url string
-var datalakeUrl string
+var ovdsUrl string
 var thisVin string
 
 type PathList struct {
@@ -143,35 +143,35 @@ func getGen2Response(path string) string {
 	return string(body)
 }
 
-func writeToDataLake(response string, path string) {
+func writeToOVDS(response string, path string) {
 	/*        type DataPoint struct {
 		Value string
 		Timestamp string
 	}
 	jsonizedResponse := `{"datapoint":` + response + "}"
-	fmt.Printf("writeToDataLake: Response= %s \n", jsonizedResponse)
+	fmt.Printf("writeToOVDS: Response= %s \n", jsonizedResponse)
 	var dataPoint DataPoint
 	err := json.Unmarshal([]byte(jsonizedResponse), &dataPoint)
 	if err != nil {
-		fmt.Printf("writeToDataLake: Error JSON decoding of response= %s \n", err)
+		fmt.Printf("writeToOVDS: Error JSON decoding of response= %s \n", err)
 		return
 	}*/
-	url := datalakeUrl + ":8765/datalakeserver"
-	fmt.Printf("writeToDataLake: response = %s\n", response)
+	url := ovdsUrl + ":8765/ovdsserver"
+	fmt.Printf("writeToOVDS: response = %s\n", response)
 
 	data := `{"action":"set", "vin":"` + thisVin + `" ,"path":"` + path + `", ` + response[1:]
-	fmt.Printf("writeToDataLake: request payload= %s \n", data)
+	fmt.Printf("writeToOVDS: request payload= %s \n", data)
 
 	req, err := http.NewRequest("POST", url, strings.NewReader(data)) //bytes.NewBuffer(data))
 	if err != nil {
-		fmt.Printf("writeToDataLake: Error creating request= %s \n", err)
+		fmt.Printf("writeToOVDS: Error creating request= %s \n", err)
 		return
 	}
 
 	// Set headers
 	req.Header.Set("Access-Control-Allow-Origin", "*")
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Host", datalakeUrl+":8765")
+	req.Header.Set("Host", ovdsUrl+":8765")
 
 	// Set client timeout
 	client := &http.Client{Timeout: time.Second * 10}
@@ -179,14 +179,14 @@ func writeToDataLake(response string, path string) {
 	// Send request
 	_, err = client.Do(req)
 	if err != nil {
-		fmt.Printf("writeToDataLake: Error in issuing request/response= %s ", err)
+		fmt.Printf("writeToOVDS: Error in issuing request/response= %s ", err)
 		return
 	}
 	//	defer resp.Body.Close()
 
 	/*	body, err := ioutil.ReadAll(resp.Body)   // TODO Handle error response
 		if err != nil {
-			fmt.Printf("writeToDataLake: Error in reading response= %s ", err)
+			fmt.Printf("writeToOVDS: Error in reading response= %s ", err)
 			return
 		}*/
 }
@@ -202,7 +202,7 @@ func runList(trimList bool) {
 				pathList.LeafPaths = pathList.LeafPaths[:len(pathList.LeafPaths)-1]
 			}
 		} else {
-			writeToDataLake(response, pathList.LeafPaths[i])
+			writeToOVDS(response, pathList.LeafPaths[i])
 		}
 		time.Sleep(5 * time.Millisecond)
 	}
@@ -211,12 +211,12 @@ func runList(trimList bool) {
 func main() {
 
 	if len(os.Args) != 7 {
-		fmt.Printf("CCS client command line: ./client nodelist-filename gen2-server-url datalake-server-url vss-tree-filename vin sleeptime\n")
+		fmt.Printf("CCS client command line: ./client nodelist-filename gen2-server-url OVDS-server-url vss-tree-filename vin sleeptime\n")
 		os.Exit(1)
 	}
 	sleep, _ := strconv.Atoi(os.Args[6])
 	gen2Url = os.Args[2]
-	datalakeUrl = os.Args[3]
+	ovdsUrl = os.Args[3]
 	thisVin = os.Args[5]
 	if fileExists(os.Args[1]) {
 		if createListFromFile(os.Args[1]) != 0 {
