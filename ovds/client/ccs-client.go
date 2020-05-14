@@ -39,6 +39,11 @@ type PathList struct {
 
 var pathList PathList
 
+func pathToUrl(path string) string {
+	var url string = strings.Replace(path, ".", "/", -1)
+	return "/" + url
+}
+
 func fileExists(filename string) bool {
 	info, err := os.Stat(filename)
 	if os.IsNotExist(err) {
@@ -110,11 +115,11 @@ func saveListAsFile(fname string) {
 }
 
 func getGen2Response(path string) string {
-	url := gen2Url + ":8888/" + path
+	url := "http://" + gen2Url + ":8888" + pathToUrl(path)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		fmt.Printf("getGen2Response: Error creating request= %s ", err)
+		fmt.Printf("getGen2Response: Error creating request=%s.", err)
 		return ""
 	}
 
@@ -156,7 +161,7 @@ func writeToOVDS(response string, path string) {
 		fmt.Printf("writeToOVDS: Error JSON decoding of response= %s \n", err)
 		return
 	}*/
-	url := ovdsUrl + ":8765/ovdsserver"
+	url := "http://" + ovdsUrl + ":8765/ovdsserver"
 	fmt.Printf("writeToOVDS: response = %s\n", response)
 
 	data := `{"action":"set", "vin":"` + thisVin + `" ,"path":"` + path + `", ` + response[1:]
