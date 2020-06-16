@@ -9,13 +9,10 @@
 package main
 
 import (
-    "net/http"
-    "encoding/json"
     "io/ioutil"
     "os"
-    "strconv"
     "strings"
-    "unsafe"
+    "encoding/json"
 
     "database/sql"
     "fmt"
@@ -75,6 +72,14 @@ func InitDb(dbFile string, isNewDB bool) {
 
 }
 
+func jsonToStructList(jsonList string, elements int) int {
+	err := json.Unmarshal([]byte(jsonList), &pathList) //exclude curly braces when only one key-value pair
+	if err != nil {
+		fmt.Printf("Error unmarshal json=%s\n", err)
+		return -1
+	}
+	return 0
+}
 
 func createVssList(fname string) int {
 	data, err := ioutil.ReadFile(fname)
@@ -109,11 +114,11 @@ func writeVssEntry(path string) int {
 }
 
 
-func runVssList(trimList bool) int {
+func runVssList() int {
 	elements := len(pathList.LeafPaths)
 	for i := 0; i < elements; i++ {
 	    if (writeVssEntry(pathList.LeafPaths[i]) == -1) {
-	        return -1)
+	        return -1
 	    }
 	}
 	return 0
@@ -151,7 +156,7 @@ func getNonMappedPaths(domainName string) *sql.Rows {
 func getNextPath(rows *sql.Rows, domainName string) string {
     var path string
     rows.Next()
-    err = rows.Scan(&path)
+    err := rows.Scan(&path)
     checkErr(err)
     if err != nil {
 	return ""
@@ -195,6 +200,22 @@ func createMap(domainName string, vssPath string, handle string) int {
 	return 0
 }
 
+func domainTableExists(domainName string) bool {
+	domainTableName := domainName + "_MAP"
+	sqlString := "SHOW TABLES LIKE " + domainTableName
+	rows, err := db.Query(sqlString)
+	checkErr(err)
+	if err != nil {
+		return false
+	}
+	var count int
+	rows.Scan(&count)
+	if (count > 0) {
+            return true
+	}
+	return false
+}
+
 func populateProprietary() {
     var domainName, command, vssPath string
     fmt.Printf("Name of non-VSS domain:")
@@ -205,7 +226,7 @@ func populateProprietary() {
     var rows *sql.Rows
     defer rows.Close()
     rows = getNonMappedPaths(domainName)
-    command[0] = 'a'  //anything but s
+    command = "a"  //anything but s
     for {
         if (command[0] != 's') {
             vssPath = getNextPath(rows, domainName)
@@ -219,7 +240,8 @@ func populateProprietary() {
         switch command {
           case "m": fallthrough
           case "map":
-              fmt.Printf("%s handle to be mapped to %s:")
+              var handle string
+              fmt.Printf("%s handle to be mapped to %s:", domainName, vssPath)
               fmt.Scanf("%s", &handle)
               createMap(domainName, vssPath, handle)
           case "n": fallthrough
@@ -228,11 +250,12 @@ func populateProprietary() {
           case "search":
               fmt.Printf("VSS path to search for:")
               fmt.Scanf("%s", &vssPath)
-              rows.First()
+              rows.Close()
+              rows = getNonMappedPaths(domainName)  //start from beginning
               var path string
               for {
                       rows.Next()
-                      err = rows.Scan(&path)
+                      err := rows.Scan(&path)
                       checkErr(err)
                       if err != nil {
 	                    break
@@ -258,7 +281,7 @@ func main() {
                 os.Exit(1)
             }
             os.Exit(0)
-        } else if (len(os.Args) == 2 {
+        } else if (len(os.Args) == 2) {
             InitDb(os.Args[1], false)
             defer db.Close()
             populateProprietary()
