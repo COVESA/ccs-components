@@ -1,0 +1,28 @@
+The vehicle state storage is used in the Genivi CCS project as a buffer between the Data server and the underlying "native" vehicle signal subsystem. The state storage manager provides the following services in this context:<br>
+1. The creation of the SQL database that realizes this buffer.<br>
+2. Population of the database with the paths to all VSS nodes as defined at https://github.com/GENIVI/vehicle_signal_specification.<br>
+3. Creation of a mapping between VSS paths and any "non-VSS" signal address space.<br><br>
+The services 1. and 2. are performed by executing the state storage manager with the following two command line parameters:<br>
+A. The path and name for the new SQL database. This should NOT point to an existing file.<br>
+B. The path and name to a file containing all the VSS paths. An example of such a file is the nodelist.txt. 
+The OVDS client (https://github.com/GENIVI/ccs-w3c-client/tree/master/ovds/client) can be used to produce such a file.<br><br>
+The service 3. is performed by executing the state storage manager with one command line parameter:<br>
+C. The path and name for an existing SQL database created by the state storage manager.
+A dialogue is then started where the manager first asks for the name of the "non-VSS address space.<br>
+The name provided can either lead to creation of a new mapping to be initiated, if the manager does not find a table with that name. 
+The name should only consist of characters [a-z, A-Z, 0-9].
+If it finds a table with the name, it assumes that the user wants to map further VSS signals to signals in this address space.<br>
+The dialogue supporting the mapping is only providing the most essential functions:<br>
+- Map a non-VSS text based "handle" to a VSS path that has not been mapped before.<br>
+- Go to the next non-mapped VSS path<br>
+- Search among non-mapped VSS path for a path to map.<br>
+- Quit the dialogue.<br><br>
+The manager does currently not support change of already mapped signals, or removal of entire "non-VSS" mapping tables. 
+As the databae is a standard SQL database, standard SQL tools can be used for that.<br><br>
+The manager is not meant to be used when the database is used for transferring data from a non-VSS domain to the VSS domain. 
+In the CSS context there will then be a "feeder" in the non-VSS domain that writes data into the database, and the Data server that reads data into the VSS domain. 
+The feeder can be coded in any language, but the SQL query for writing into the database will look (more or less) the same in all languages. 
+As a help for the coding of a feeder the query, as it looks in a Go language context.
+The non-VSS address space is in this example assumed to be called XXX, hence the table is named XXX_MAP.<br>
+First get the signal_id associated to the non-VSS handle by this query: "SELECT signal_id FROM XXX_MAP WHERE handle=?"<br>
+Then write the value by this query: "UPDATE VSS_MAP SET value=? WHERE signal_id=?" 
