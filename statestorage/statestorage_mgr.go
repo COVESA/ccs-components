@@ -13,6 +13,7 @@ import (
     "os"
     "strings"
     "encoding/json"
+    "time"
 
     "database/sql"
     "fmt"
@@ -28,7 +29,7 @@ var db *sql.DB
 var dbErr error
 
 func createStaticTables() int {
-	stmt1, err := db.Prepare(`CREATE TABLE "VSS_MAP" ( "signal_id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, "path" TEXT NOT NULL, "value" TEXT )`)
+	stmt1, err := db.Prepare(`CREATE TABLE "VSS_MAP" ( "signal_id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, "path" TEXT NOT NULL, "value" TEXT, "timestamp" TEXT )`)
 	checkErr(err)
 
 	_, err = stmt1.Exec()
@@ -324,13 +325,13 @@ func writeData(domainName string, handle string) {
 	}
 	rows.Close()
 	fmt.Printf("signalId=%d\n",signalId)
-	stmt, err2 := db.Prepare("UPDATE VSS_MAP SET value=? WHERE `signal_id`=?")
+	stmt, err2 := db.Prepare("UPDATE VSS_MAP SET value=?, timestamp=? WHERE `signal_id`=?")
 	checkErr(err2)
 	if err2 != nil {
 		return
 	}
 
-	_, err2 = stmt.Exec("123", signalId)
+	_, err2 = stmt.Exec("123", time.Now(), signalId)
 	checkErr(err2)
 	if err2 != nil {
 		return
