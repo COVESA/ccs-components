@@ -25,4 +25,5 @@ The feeder can be coded in any language, but the SQL query for writing into the 
 As a help for the coding of a feeder the query, as it looks in a Go language context.
 The non-VSS address space is in this example assumed to be called XXX, hence the table is named XXX_MAP.<br>
 First get the signal_id associated to the non-VSS handle by this query: "SELECT signal_id FROM XXX_MAP WHERE handle=?"<br>
-Then write the value by this query: "UPDATE VSS_MAP SET value=? WHERE signal_id=?" 
+Then write the value and timestamp by this query: "UPDATE VSS_MAP SET value=?, timestamp=? WHERE signal_id=?"
+The timestamp should follow the ISO8601 format "YYYY-MM-DDTHH:MM:SS.ssssssZ", where the sub-second part is optional.
