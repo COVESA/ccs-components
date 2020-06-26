@@ -143,10 +143,8 @@ func createDomainTable(domainName string) {
 }
 
 func getNonMappedPaths(domainName string, rows **sql.Rows) int {
-//	var rows *sql.Rows
 	var err error
 	domainTableName := domainName + "_MAP"
-//	sqlString := "SELECT `path` FROM `VSS_MAP` WHERE `VSS_MAP`(`signal_id`) <> `" + domainTableName + "`(`signal_id`)"
 	sqlString := "SELECT signal_id, path FROM VSS_MAP WHERE signal_id NOT IN (SELECT signal_id FROM " + domainTableName + ")"
 	*rows, err = db.Query(sqlString)
 	checkErr(err)
@@ -208,7 +206,6 @@ func domainTableExists(domainName string) bool {
 	domainTableName := domainName + "_MAP"
 	sqlString := "SELECT `signal_id` FROM `" + domainTableName + "`"
 	rows, err := db.Query(sqlString)
-	checkErr(err)
 	if err != nil {
 		return false
 	}
@@ -224,7 +221,7 @@ func populateProprietary() {
         createDomainTable(domainName)
     }
     var rows *sql.Rows
-//    defer rows.Close()
+    defer rows.Close()
     if (getNonMappedPaths(domainName, &rows) == -1) {
         fmt.Printf("All VSS paths already mapped.\n")
         os.Exit(0)
@@ -274,8 +271,11 @@ func populateProprietary() {
               var handle string
               fmt.Printf("non-VSS handle:")
               fmt.Scanf("%s", &handle)
+              var value string
+              fmt.Printf("Value:")
+              fmt.Scanf("%s", &value)
               rows.Close() // unlock DB for createMap()
-              writeData(domainName, handle)
+              writeData(domainName, handle, value)
               getNonMappedPaths(domainName, &rows)  // restart
           default: 
               fmt.Printf("Invalid command.\n")
@@ -309,7 +309,16 @@ func main() {
         }
 }
 
-func writeData(domainName string, handle string) {
+func getRfcTime() string {
+    withTimeZone := time.Now().Format(time.RFC3339)   // 2020-05-01T15:34:35+02:00
+    if (withTimeZone[len(withTimeZone)-6] == '+') {
+        return withTimeZone[:len(withTimeZone)-6] + "Z"
+    } else {
+        return withTimeZone
+    }
+}
+
+func writeData(domainName string, handle string, value string) {
 	rows, err := db.Query("SELECT `signal_id` FROM " + domainName + "_MAP WHERE `handle`=?", handle)
 	checkErr(err)
 	if err != nil {
@@ -331,7 +340,7 @@ func writeData(domainName string, handle string) {
 		return
 	}
 
-	_, err2 = stmt.Exec("123", time.Now(), signalId)
+	_, err2 = stmt.Exec(value, getRfcTime(), signalId)
 	checkErr(err2)
 	if err2 != nil {
 		return
