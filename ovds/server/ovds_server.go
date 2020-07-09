@@ -71,7 +71,7 @@ func fileExists(filename string) bool {
 }
 
 func InitDb(dbFile string) {
-	if fileExists(dbFile) {
+	if !fileExists(dbFile) {
 		db, dbErr = sql.Open("sqlite3", dbFile)
 		checkErr(dbErr)
 		err := createStaticTables()
@@ -79,11 +79,7 @@ func InitDb(dbFile string) {
 			fmt.Printf("\novdsServer: Unable to make static tables : %s\n", err)
 			os.Exit(1)
 		}
-	}else{
-		fmt.Printf("\novdsServer: Please make sure %s exists\n", dbFile)
-		os.Exit(1)
 	}
-
 }
 
 func writeVIN(vin string) int {
@@ -119,7 +115,6 @@ func writeTvValue(vinId int, uuid string, value string, timestamp string) int {
 }
 
 func writeTivValue(vinId int, uuid string, value string) int {
-<<        sqlString := "INSERT INTO TIV " + "(vin_id, value, uuid) values(?, ?, ?)"
         sqlString := "INSERT INTO TIV (vin_id, uuid) VALUES(?, ?)"
         stmt, err := db.Prepare(sqlString)
         checkErr(err)
