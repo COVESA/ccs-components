@@ -71,9 +71,13 @@ func fileExists(filename string) bool {
 }
 
 func InitDb(dbFile string) {
-	if !fileExists(dbFile) {
-		db, dbErr = sql.Open("sqlite3", dbFile)
-		checkErr(dbErr)
+        doCreate := true
+	if fileExists(dbFile) {
+	    doCreate = false
+	}
+	db, dbErr = sql.Open("sqlite3", dbFile)
+	checkErr(dbErr)
+	if (doCreate) {
 		err := createStaticTables()
 		if err != 0 {
 			fmt.Printf("\novdsServer: Unable to make static tables : %s\n", err)
