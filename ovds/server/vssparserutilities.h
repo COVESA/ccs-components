@@ -44,4 +44,5 @@ char* getFunction(long nodeHandle);
 
 int VSSSearchNodes(char* searchPath, long rootNode, int maxFound, searchData_t* searchData, bool anyDepth, bool leafNodesOnly, int* validation);
 int VSSGetLeafNodesList(long rootNode, char* listFname);
+int VSSGetUuidList(long rootNode, char* listFname);
 

@@ -26,6 +26,7 @@ int maxTreeDepth;
 int ret;
 
 bool isGetLeafNodeList;
+bool isGetUuidList;
 
 void initTreeDepth() {
 	currentDepth = 0;
@@ -264,17 +265,31 @@ int saveMatchingNode(long thisNode, SearchContext_t* context, bool* done) {
 		context->maxValidation = getValidation(thisNode);  // TODO handle speculative setting
 	}
 	if (VSSgetType(thisNode) != BRANCH || context->leafNodesOnly == false) {
-		if ( isGetLeafNodeList == false) {
+		if ( isGetLeafNodeList == false && isGetUuidList == false) {
 			strcpy(context->searchData[context->numOfMatches].responsePaths, context->matchPath);
 			context->searchData[context->numOfMatches].foundNodeHandles = thisNode;
 		} else {
-			if (context->numOfMatches == 0) {
-				fwrite("\"", 1, 1, context->listFp);
+			if (isGetLeafNodeList == true) {
+			    if (context->numOfMatches == 0) {
+				    fwrite("\"", 1, 1, context->listFp);
+			    } else {
+				    fwrite(", \"", 3, 1, context->listFp);
+			    }
+			    fwrite(context->matchPath, strlen(context->matchPath), 1, context->listFp);
+			    fwrite("\"", 1, 1, context->listFp);
 			} else {
-				fwrite(", \"", 3, 1, context->listFp);
+			    if (context->numOfMatches == 0) {
+				    fwrite("{\"", 2, 1, context->listFp);
+			    } else {
+				    fwrite(", {\"", 4, 1, context->listFp);
+			    }
+			    fwrite(context->matchPath, strlen(context->matchPath), 1, context->listFp);
+			    fwrite("\", \"", 4, 1, context->listFp);
+			    char uuid[32+1];
+			    strcpy(uuid, VSSgetUUID(thisNode));
+			    fwrite(uuid, strlen(uuid), 1, context->listFp);
+			    fwrite("\"}", 2, 1, context->listFp);
 			}
-			fwrite(context->matchPath, strlen(context->matchPath), 1, context->listFp);
-			fwrite("\"", 1, 1, context->listFp);
 		}
 		context->numOfMatches++;
 		if (context->speculationIndex >= 0) {
@@ -383,6 +398,7 @@ int VSSSearchNodes(char* searchPath, long rootNode, int maxFound, searchData_t* 
 	struct SearchContext_t searchContext;
 	struct SearchContext_t* context = &searchContext;
 	isGetLeafNodeList = false;
+	isGetUuidList = false;
 
 	initContext(context, searchPath, rootNode, maxFound, searchData, anyDepth, leafNodesOnly);
 	traverseNode(rootNode, context);
@@ -399,6 +415,21 @@ int VSSGetLeafNodesList(long rootNode, char* listFname) {
 
 	FILE* listFp = fopen(listFname, "w+");
 	fwrite("{\"leafpaths\":[", 14, 1, listFp);
+	initContext_LNL(context, "Vehicle.*", rootNode, listFp, true, true);  // anyDepth = true, leafNodesOnly = true
+	traverseNode(rootNode, context);
+	fwrite("]}", 2, 1, listFp);
+	fclose(listFp);
+
+	return context->numOfMatches;
+}
+
+int VSSGetUuidList(long rootNode, char* listFname) {
+	struct SearchContext_t searchContext;
+	struct SearchContext_t* context = &searchContext;
+	isGetUuidList = true;
+
+	FILE* listFp = fopen(listFname, "w+");
+	fwrite("{\"leafuuids\":[", 14, 1, listFp);
 	initContext_LNL(context, "Vehicle.*", rootNode, listFp, true, true);  // anyDepth = true, leafNodesOnly = true
 	traverseNode(rootNode, context);
 	//    int len = strlen(leafNodeList);

@@ -216,7 +216,7 @@ func runList(trimList bool) {
 func main() {
 
 	if len(os.Args) != 7 {
-		fmt.Printf("CCS client command line: ./client nodelist-filename gen2-server-url OVDS-server-url vss-tree-filename vin sleeptime\n")
+		fmt.Printf("CCS client command line: ./client pathlist-filename gen2-server-url OVDS-server-url vss-tree-filename vin sleeptime\n")
 		os.Exit(1)
 	}
 	sleep, _ := strconv.Atoi(os.Args[6])
