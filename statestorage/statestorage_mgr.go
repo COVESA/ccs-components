@@ -59,7 +59,7 @@ func InitDb(dbFile string, isNewDB bool) {
 	if (isNewDB == true && fileExists(dbFile)) {
 		fmt.Printf("\ndataStorageMgr: DB %s already exist, cannot create a new with same name.\n", dbFile)
 		os.Exit(1)
-	} else {
+	} else if (fileExists(dbFile)) {
 		db, dbErr = sql.Open("sqlite3", dbFile)
 		checkErr(dbErr)
 		if (isNewDB == true) {
@@ -69,6 +69,9 @@ func InitDb(dbFile string, isNewDB bool) {
 			    os.Exit(1)
 		    }
 		}
+	} else {
+		fmt.Printf("\nDB %s must exist, or else the statestorage manager must be started also with a filename to a JSON pathlist.\nSee README\n", dbFile)
+		os.Exit(1)
 	}
 
 }
