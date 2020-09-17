@@ -318,8 +318,7 @@ func setErrorResponse(reqMap map[string]interface{}, errRespMap map[string]inter
 	errRespMap["error"] = `{"number":` + number + `,"reason":"` + reason + `","message":"` + message + `"}`
 }
 
-func initVssFile() C.long {
-	filePath := "vss_rel_2.0.0-alpha+006.cnative"
+func initVssFile(filePath string) C.long {
 	cfilePath := C.CString(filePath)
 	root := C.VSSReadTree(cfilePath)
 	C.free(unsafe.Pointer(cfilePath))
@@ -526,15 +525,15 @@ func OVDSSetValue(reqMap map[string]interface{}) string {
 
 func main() {
 
-        if (len(os.Args) != 2) {
-            fmt.Printf("OVDS server command line must contain name of database.\n")
+        if (len(os.Args) != 3) {
+            fmt.Printf("./ovds_server db-file-name cnative-vss-tree-file-name\n")
             os.Exit(1)
         }
 
 	serverChan := make(chan string)
 	muxServer := http.NewServeMux()
 
-	VSSTreeRoot = initVssFile()
+	VSSTreeRoot = initVssFile(os.Args[2])
 	if VSSTreeRoot == 0 {
 		fmt.Println("VSS tree file not found")
 		os.Exit(1)
