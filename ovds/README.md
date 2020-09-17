@@ -1,8 +1,9 @@
-The Open Vehicle Data Set (OVDS) server takes a database file name as command line input, as the examle shows below.
+The Open Vehicle Data Set (OVDS) server takes a database file name and the name of a file containing a VSS tree as command line input, as the examle shows below.
 
-$ ./ovds_server path-to-file/ovds.db
+$ ./ovds_server db-file-name vss-tree-filename
 
-If the file does not exist, it creates an SQLite database with the provided name, and creates the tables:
+The VSS tree must have the cnative format. 
+If the database file does not exist, it creates an SQLite database with the provided name, and creates the tables:
 
 CREATE TABLE "VIN_TIV" ( "vin_id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, "vin" TEXT NOT NULL )
 CREATE TABLE "TIV" ( "vin_id" INTEGER NOT NULL, "uuid" TEXT NOT NULL, "value" TEXT NOT NULL, FOREIGN KEY("vin_id") REFERENCES "VIN_TIV"("vin_id") )
@@ -12,6 +13,7 @@ The server supports the methods get/set/getmetadata. These methods are requested
 
 {"action":"get", "vin": "YV1DZ8256C2271234", "path":"Vehicle/Cabin/Door/Row1/Left/IsOpen", "from":"2020-01-01T02:59:43.492750Z", "to":"2020-03-31T02:59:43.492750Z"} // get specified period<br>
 {"action":"get", "vin": "YV1DZ8256C2271234", "path":"Vehicle/Cabin/Door/Row1/Left/IsOpen", "from":"2020-01-09T02:59:43.492750Z"}  // get period from boundary up to latest value<br>
+{"action":"get", "vin": "YV1DZ8256C2271234", "path":"Vehicle/Cabin/Door/Row1/Left/IsOpen", "from":"2020-01-09T02:59:43.492750Z", "maxsamples":"5"}  // get period from boundary up to latest value, not more than 5 samples<br>
 {"action":"get", "vin": "YV1DZ8256C2271234", "path":"Vehicle/Cabin/Door/Row1/Left/IsOpen"}  // get latest value
 
 
