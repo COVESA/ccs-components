@@ -579,7 +579,10 @@ func main() {
                                        case 4:
 		                           setErrorResponse(requestMap, errorResponseMap, "400", "No matching VIN.", "")
                                        }
-			               serverChan <- finalizeMessage(errorResponseMap)
+                                       resp := finalizeMessage(errorResponseMap)
+                                       resp = strings.Replace(resp, "\"{", "{", -1)  // due to simplistic map handling...
+                                       resp = strings.Replace(resp, "}\"", "}", -1)
+			                serverChan <- resp
                                        break
                                 }
 			        serverChan <- finalizeMessage(responseMap)
