@@ -203,7 +203,7 @@ func readMax(tableName string, columnName string, uuid string) string {
 	return maxValue
 }
 
-func readTvValue(vinId int, uuid string, from string, to string) string {
+func readTvValue(vinId int, uuid string, from string, to string, maxSamples int) string {
 	var rows *sql.Rows
 	var err error
 	tableName := "TV_" + strconv.Itoa(vinId)
@@ -238,6 +238,9 @@ func readTvValue(vinId int, uuid string, from string, to string) string {
 		}
 		datapoints += `{"value": "` + value + `", "timestamp": "` + timestamp + `"}, `
 		numOfDatapoints++
+		if (numOfDatapoints == maxSamples) {
+		    break
+		}
 	}
 	rows.Close()
 	datapoints = datapoints[:len(datapoints)-2]
@@ -442,6 +445,7 @@ func OVDSGetValue(reqMap map[string]interface{}) (string, int) {
 		nodetype := treeMap["nodetype"].(string)
 		uuid := treeMap["uuid"].(string)
 		var from string
+		var maxSamples int
 		if reqMap["from"] == nil {
 			from = ""
 		} else {
@@ -453,11 +457,21 @@ func OVDSGetValue(reqMap map[string]interface{}) (string, int) {
 		} else {
 			to = reqMap["to"].(string)
 		}
+		if reqMap["maxsamples"] == nil {
+			maxSamples = 0
+		} else {
+		        var err error
+			maxSamples, err = strconv.Atoi(reqMap["maxsamples"].(string))
+			if (err != nil) {
+			    fmt.Printf("Maxsamples invalid, err=%s\n", err)
+ 			    maxSamples = 0
+			}
+		}
 		if nodetype == "ATTRIBUTE" {
 			value := readTivValue(vinId, uuid)
 			response += `{ "path":"` + path + `, "value":"` + value + "}, "
 		} else {
-			datapoints := readTvValue(vinId, uuid, from, to)
+			datapoints := readTvValue(vinId, uuid, from, to, maxSamples)
 			response += `{"path":"` + path + `, "datapoints":"` + datapoints + "}, "
 		}
 	}
