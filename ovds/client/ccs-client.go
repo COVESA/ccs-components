@@ -19,6 +19,7 @@ import (
 
 	"fmt"
 	"time"
+        "sort"
 )
 
 // #include <stdlib.h>
@@ -88,6 +89,22 @@ func createListFromFile(fname string) int {
 	return jsonToStructList(string(data), elements)
 }
 
+func sortPathList(listFname string) {
+	data, err := ioutil.ReadFile(listFname)
+	if err != nil {
+		fmt.Printf("Error reading %s: %s\n", listFname, err)
+		return
+	}
+	err = json.Unmarshal([]byte(data), &pathList)
+	if err != nil {
+		fmt.Printf("Error unmarshal json=%s\n", err)
+		return
+	}
+	sort.Strings(pathList.LeafPaths)
+	file, _ := json.Marshal(pathList)
+	_ = ioutil.WriteFile(listFname, file, 0644)
+}
+
 func createListFromTree(treeFname string, listFname string) int {
 	// call int VSSGetLeafNodesList(long rootNode, char* leafNodeList);
 	ctreeFname := C.CString(treeFname)
@@ -97,6 +114,7 @@ func createListFromTree(treeFname string, listFname string) int {
 	//    var matches C.int =
 	C.VSSGetLeafNodesList(vssRoot, clistFname)
 	C.free(unsafe.Pointer(clistFname))
+	sortPathList(listFname)
 	return createListFromFile(listFname)
 }
 
