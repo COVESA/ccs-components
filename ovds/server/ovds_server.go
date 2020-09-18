@@ -583,11 +583,11 @@ func main() {
                                        break
                                 }
                                resp := finalizeMessage(responseMap)
+                               resp = strings.Replace(resp, "\\", "", -1)
                                resp = strings.Replace(resp, "\"{", "{", -1)  // due to simplistic map handling...
                                resp = strings.Replace(resp, "}\"", "}", -1)
                                resp = strings.Replace(resp, "\"[", "[", -1)
                                resp = strings.Replace(resp, "]\"", "]", -1)
-                               resp = strings.Replace(resp, "\\", "", -1)
 			        serverChan <- resp
 			case "set":
 				responseMap["status"] = OVDSSetValue(requestMap)
