@@ -537,6 +537,49 @@ func OVDSSetValue(reqMap map[string]interface{}) string {
 	return "200 OK"
 }
 
+func cleanupResponse(resp string) string {
+    resp = fixEscapeChars(resp)
+    resp = strings.Replace(resp, "\"{", "{", -1)
+    resp = strings.Replace(resp, "}\"", "}", -1)
+    resp = strings.Replace(resp, "\"[{", "[{", -1)
+    resp = strings.Replace(resp, "}]\"", "}]", -1)
+    return resp
+}
+
+func nextQuoteMark(message string) int {
+    for i := 0 ; i < len(message) ; i++ {
+        if (message[i] == '"') {
+            return i
+        }
+    }
+    return -1
+}
+
+func fixEscapeChars(resp string) string {  // keep in arrrays of scalars, else remove
+    arrayEnd := 0
+    arrayFront := strings.Index(resp, "[")
+    for arrayFront > arrayEnd {
+fmt.Printf("\n\nArrayFront=%d\n", arrayFront)
+fmt.Printf("nextQuoteMark=%d\n\n", nextQuoteMark(resp[arrayFront:]))
+        if (arrayFront >= 0 && nextQuoteMark(resp[arrayFront:]) == 2) {
+            resp = resp[:arrayEnd] + strings.Replace(resp[arrayEnd:arrayFront+1], "\\", "", -1) + resp[arrayFront+1:]
+            arrayFront = arrayEnd + strings.Index(resp[arrayEnd:], "[")  // recalibrate arrayFront
+            arrayEnd = arrayFront + strings.Index(resp[arrayFront:], "]")
+            arrayFront = arrayEnd + strings.Index(resp[arrayEnd:], "[")
+//fmt.Printf("\n\nArray=%s\n\n\n", resp[arrayFront:arrayEnd])
+        } else {
+            bracketIndex := strings.Index(resp[arrayFront+1:], "[")
+            if (bracketIndex >= 0) {
+                arrayFront += 1 + bracketIndex
+            } else {
+                arrayFront = arrayEnd -1
+            }
+        }
+    }
+    resp = resp[:arrayEnd] + strings.Replace(resp[arrayEnd:], "\\", "", -1)
+    return resp
+}
+
 func main() {
 
         if (len(os.Args) != 3) {
@@ -583,11 +626,7 @@ func main() {
                                        break
                                 }
                                resp := finalizeMessage(responseMap)
-                               resp = strings.Replace(resp, "\\", "", -1)
-                               resp = strings.Replace(resp, "\"{", "{", -1)  // due to simplistic map handling...
-                               resp = strings.Replace(resp, "}\"", "}", -1)
-                               resp = strings.Replace(resp, "\"[", "[", -1)
-                               resp = strings.Replace(resp, "]\"", "]", -1)
+                               resp = cleanupResponse(resp)   // due to simplistic map handling...
 			        serverChan <- resp
 			case "set":
 				responseMap["status"] = OVDSSetValue(requestMap)
