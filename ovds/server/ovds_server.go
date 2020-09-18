@@ -469,10 +469,10 @@ func OVDSGetValue(reqMap map[string]interface{}) (string, int) {
 		}
 		if nodetype == "ATTRIBUTE" {
 			value := readTivValue(vinId, uuid)
-			response += `{ "path":"` + path + `, "value":"` + value + "}, "
+			response += `{ "path":"` + path + `", "value":"` + value + `"}, `
 		} else {
 			datapoints := readTvValue(vinId, uuid, from, to, maxSamples)
-			response += `{"path":"` + path + `, "datapoints":"` + datapoints + "}, "
+			response += `{"path":"` + path + `", "datapoints":"` + datapoints + "}, "
 		}
 	}
 	response = response[:len(response)-2]
@@ -579,13 +579,16 @@ func main() {
                                        case 4:
 		                           setErrorResponse(requestMap, errorResponseMap, "400", "No matching VIN.", "")
                                        }
-                                       resp := finalizeMessage(errorResponseMap)
-                                       resp = strings.Replace(resp, "\"{", "{", -1)  // due to simplistic map handling...
-                                       resp = strings.Replace(resp, "}\"", "}", -1)
-			                serverChan <- resp
+			                serverChan <- finalizeMessage(errorResponseMap)
                                        break
                                 }
-			        serverChan <- finalizeMessage(responseMap)
+                               resp := finalizeMessage(responseMap)
+                               resp = strings.Replace(resp, "\"{", "{", -1)  // due to simplistic map handling...
+                               resp = strings.Replace(resp, "}\"", "}", -1)
+                               resp = strings.Replace(resp, "\"[", "[", -1)
+                               resp = strings.Replace(resp, "]\"", "]", -1)
+                               resp = strings.Replace(resp, "\\", "", -1)
+			        serverChan <- resp
 			case "set":
 				responseMap["status"] = OVDSSetValue(requestMap)
 			        serverChan <- finalizeMessage(responseMap)
