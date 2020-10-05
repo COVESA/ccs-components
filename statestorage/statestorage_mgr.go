@@ -14,10 +14,8 @@ import (
     "strings"
     "encoding/json"
     "time"
-
     "database/sql"
     "fmt"
-    _ "github.com/mattn/go-sqlite3"
 )
 type PathList struct {
 	LeafPaths []string
