@@ -4,3 +4,4 @@ ovds/server/server
 ovds/client/client
 *.db
 node-modules
+statestorage/statestorage
