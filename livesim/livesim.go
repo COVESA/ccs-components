@@ -186,7 +186,7 @@ func fillRings(ringArray []RingBuffer, numOfPaths int, skipFirstSample bool) {
             indexStart = 1
         }
         response := getOvdsSamples(pathList.LeafPaths[i], latestTimestamp[i], numOfFreeElements)
-        if (len(response) == 0) {
+        if (len(response) == 0 || strings.Contains(response, "error") == true) {
             continue
         }
 //fmt.Printf("fillRings:  response(%d)=%s\n", i, response)
@@ -214,12 +214,12 @@ func getCurrentUtcTime() time.Time {
 }
 
 func getOldestTimestamp(ringArray []RingBuffer, numOfPaths int) time.Time {
-    oldestTime := getCurrentUtcTime()
+    oldestTime := getCurrentUtcTime()  // ts must be older then current time
     for i := 0 ; i < numOfPaths ; i++ {   // check the next to be sent in each ring, select the "oldest"
         _, timestamp := readRing(i)
         ts, err := convertFromIsoTime(timestamp)
         if (err == nil) {
-            if (ts.After(oldestTime)) {
+            if (ts.Before(oldestTime)) {
                 oldestTime = ts
             }
         }
