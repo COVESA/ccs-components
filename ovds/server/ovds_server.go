@@ -243,6 +243,9 @@ func readTvValue(vinId int, uuid string, from string, to string, maxSamples int)
 		}
 	}
 	rows.Close()
+	if (numOfDatapoints == 0) {
+	    return ""
+	}
 	datapoints = datapoints[:len(datapoints)-2]
 	if numOfDatapoints > 1 {
 		datapoints += "]"
@@ -469,10 +472,16 @@ func OVDSGetValue(reqMap map[string]interface{}) (string, int) {
 		}
 		if nodetype == "ATTRIBUTE" {
 			value := readTivValue(vinId, uuid)
-			response += `{ "path":"` + path + `", "value":"` + value + `"}, `
+			if (len(value) == 0) {
+			    return "", 5
+			}
+			response += `{ "path":"` + path + `", "datapoints":{"value":"` + value + `"}}, `
 		} else {
 			datapoints := readTvValue(vinId, uuid, from, to, maxSamples)
-			response += `{"path":"` + path + `", "datapoints":"` + datapoints + "}, "
+			if (len(datapoints) == 0) {
+			    return "", 5
+			}
+			response += `{"path":"` + path + `", "datapoints":` + datapoints + `}, `
 		}
 	}
 	response = response[:len(response)-2]
@@ -621,6 +630,8 @@ func main() {
 		                           setErrorResponse(requestMap, errorResponseMap, "400", "No matching path.", "")
                                        case 4:
 		                           setErrorResponse(requestMap, errorResponseMap, "400", "No matching VIN.", "")
+                                       case 5:
+		                           setErrorResponse(requestMap, errorResponseMap, "400", "No data points found.", "")
                                        }
 			                serverChan <- finalizeMessage(errorResponseMap)
                                        break
