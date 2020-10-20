@@ -475,7 +475,7 @@ func OVDSGetValue(reqMap map[string]interface{}) (string, int) {
 			if (len(value) == 0) {
 			    return "", 5
 			}
-			response += `{ "path":"` + path + `", "datapoints":{"value":"` + value + `"}}, `
+			response += `{ "path":"` + path + `", "datapoints":[{"value":"` + value + `", "timestamp":""}]}, `
 		} else {
 			datapoints := readTvValue(vinId, uuid, from, to, maxSamples)
 			if (len(datapoints) == 0) {
