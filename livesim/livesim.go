@@ -189,18 +189,13 @@ func fillRings(ringArray []RingBuffer, numOfPaths int, skipFirstSample bool) {
         if (len(response) == 0 || strings.Contains(response, "error") == true) {
             continue
         }
-//fmt.Printf("fillRings:  response(%d)=%s\n", i, response)
         jsonToStructList(response, &sampleList)
-//fmt.Printf("fillRings: i=%d, numOfFreeElements=%d\n", i, numOfFreeElements)
         numOfFreeElements = len(sampleList.DataPack.Datapoints)
+//fmt.Printf("fillRings: i=%d, numOfFreeElements=%d\n", i, numOfFreeElements)
         for j := indexStart; j < numOfFreeElements ; j++ {
             writeRing(i, sampleList.DataPack.Datapoints[j].Value, sampleList.DataPack.Datapoints[j].Timestamp)
         }
-        if (getRingHead(i) >= len(sampleList.DataPack.Datapoints)) {
-            fmt.Printf("Live simulator: Done reading the OVDS database.\nGoodbye.\n")
-            os.Exit(0)
-        }
-        latestTimestamp[i] = sampleList.DataPack.Datapoints[getRingHead(i)].Timestamp
+        latestTimestamp[i] = sampleList.DataPack.Datapoints[numOfFreeElements-1].Timestamp
     }
 }
 
@@ -215,6 +210,7 @@ func getCurrentUtcTime() time.Time {
 
 func getOldestTimestamp(ringArray []RingBuffer, numOfPaths int) time.Time {
     oldestTime := getCurrentUtcTime()  // ts must be older then current time
+    oldestTimeOriginal := oldestTime
     for i := 0 ; i < numOfPaths ; i++ {   // check the next to be sent in each ring, select the "oldest"
         _, timestamp := readRing(i)
         ts, err := convertFromIsoTime(timestamp)
@@ -225,6 +221,10 @@ func getOldestTimestamp(ringArray []RingBuffer, numOfPaths int) time.Time {
         }
     }
 fmt.Printf("getOldestTimestamp: oldest-ts=%s\n", oldestTime)
+    if (oldestTime.Equal(oldestTimeOriginal) == true) {
+        fmt.Printf("Live simulator: Done reading the OVDS database.\nGoodbye.\n")
+        os.Exit(0)
+    }
     return oldestTime
 }
 
@@ -301,7 +301,6 @@ fmt.Printf("currentTime: %s\n", currentTime)
             fillRings(ringArray, numOfPaths, true)
         }
         currentTime = getCurrentUtcTime().Add(timeDiff)
-//        wakeUp := currentTime.Sub(getOldestTimestamp(ringArray, numOfPaths))
         wakeUp := getOldestTimestamp(ringArray, numOfPaths).Sub(currentTime)
 fmt.Printf("Sleep for: %s\n", wakeUp)
         time.Sleep(wakeUp)
