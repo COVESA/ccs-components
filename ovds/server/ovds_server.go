@@ -247,11 +247,11 @@ func readTvValue(vinId int, uuid string, from string, to string, maxSamples int)
 	    return ""
 	}
 	datapoints = datapoints[:len(datapoints)-2]
-	if numOfDatapoints > 1 {
-		datapoints += "]"
-	} else {
+//	if numOfDatapoints > 1 {
+		datapoints += "]"  // livesim expects it always to be declared as an array
+/*	} else {
 		datapoints = datapoints[1:]
-	}
+	}*/
 	return datapoints
 }
 
