@@ -95,14 +95,6 @@ func popReadRing(ringIndex int) {
     }
 }
 
-func getRingHead(ringIndex int) int {
-    return ringArray[ringIndex].Head
-}
-
-func setRingHead(ringIndex int, head int) {
-    ringArray[ringIndex].Head = head
-}
-
 func getNumOfUnreadRingElements(ringIndex int) int {
     head := ringArray[ringIndex].Head
     tail := ringArray[ringIndex].Tail
@@ -177,25 +169,20 @@ func fileExists(filename string) bool {
 	return !info.IsDir()
 }
 
-func fillRings(ringArray []RingBuffer, numOfPaths int, skipFirstSample bool) {
-    indexStart := 0
+func fillRings(ringArray []RingBuffer, numOfPaths int) {
     for i := 0 ; i < numOfPaths ; i++ {
         numOfFreeElements := RINGSIZE - getNumOfUnreadRingElements(i)
-        if (skipFirstSample == true) {
-            numOfFreeElements++
-            indexStart = 1
-        }
         response := getOvdsSamples(pathList.LeafPaths[i], latestTimestamp[i], numOfFreeElements)
         if (len(response) == 0 || strings.Contains(response, "error") == true) {
             continue
         }
         jsonToStructList(response, &sampleList)
         numOfFreeElements = len(sampleList.DataPack.Datapoints)
-//fmt.Printf("fillRings: i=%d, numOfFreeElements=%d\n", i, numOfFreeElements)
-        for j := indexStart; j < numOfFreeElements ; j++ {
+fmt.Printf("fillRings: i=%d, numOfFreeElements=%d\n", i, numOfFreeElements)
+        for j := 0; j < numOfFreeElements ; j++ {
             writeRing(i, sampleList.DataPack.Datapoints[j].Value, sampleList.DataPack.Datapoints[j].Timestamp)
+            latestTimestamp[i] = sampleList.DataPack.Datapoints[j].Timestamp
         }
-        latestTimestamp[i] = sampleList.DataPack.Datapoints[numOfFreeElements-1].Timestamp
     }
 }
 
@@ -213,6 +200,9 @@ func getOldestTimestamp(ringArray []RingBuffer, numOfPaths int) time.Time {
     oldestTimeOriginal := oldestTime
     for i := 0 ; i < numOfPaths ; i++ {   // check the next to be sent in each ring, select the "oldest"
         _, timestamp := readRing(i)
+        if (len(timestamp) == 0) {
+            continue
+        }
         ts, err := convertFromIsoTime(timestamp)
         if (err == nil) {
             if (ts.Before(oldestTime)) {
@@ -291,14 +281,14 @@ func main() {
     numOfPaths := createPathList("vsspathlist.json")
     initTimeStamps(numOfPaths)
     InitRingArray(numOfPaths)
-    fillRings(ringArray, numOfPaths, false)
+    fillRings(ringArray, numOfPaths)
     timeDiff := getOldestTimestamp(ringArray, numOfPaths).Sub(getCurrentUtcTime())
     for {
         currentTime := getCurrentUtcTime().Add(timeDiff)
 fmt.Printf("currentTime: %s\n", currentTime)
         minFill := pushRingSamples(ringArray, numOfPaths, currentTime)
         if (minFill == 0) { // could also be done if sleep time > x
-            fillRings(ringArray, numOfPaths, true)
+            fillRings(ringArray, numOfPaths)
         }
         currentTime = getCurrentUtcTime().Add(timeDiff)
         wakeUp := getOldestTimestamp(ringArray, numOfPaths).Sub(currentTime)
