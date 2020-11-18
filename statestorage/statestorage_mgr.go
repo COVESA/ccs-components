@@ -12,6 +12,7 @@ import (
     "io/ioutil"
     "os"
     "strings"
+    "strconv"
     "encoding/json"
     "time"
 
@@ -35,13 +36,13 @@ func createStaticTables() int {
 	_, err = stmt1.Exec()
 	checkErr(err)
 
-        stmt2, err2 := db.Prepare(`CREATE TABLE "NATIVE_VALUE" ( "signal_id" INTEGER NOT NULL, "int_value" INTEGER, "float_value" FLOAT, "boolean_value" BOOLEAN, FOREIGN KEY("signal_id") REFERENCES "VSS_MAP"("signal_id") )`)
+/*        stmt2, err2 := db.Prepare(`CREATE TABLE "NATIVE_VALUE" ( "signal_id" INTEGER NOT NULL, "int_value" INTEGER, "float_value" FLOAT, "boolean_value" BOOLEAN, FOREIGN KEY("signal_id") REFERENCES "VSS_MAP"("signal_id") )`)
         checkErr(err2)
 
 	_, err2 = stmt2.Exec()
-	checkErr(err2)
+	checkErr(err2)*/
 
-	if err != nil || err2 != nil {
+	if err != nil /*|| err2 != nil*/ {
 		return -1
 	}
 	return 0
@@ -140,7 +141,7 @@ func populateVSS(vssPathFile string) int {
 }
 
 func createDomainTable(domainName string) {
-	sqlString := "CREATE TABLE " + domainName + "_MAP (`signal_id` INTEGER NOT NULL, `handle` TEXT NOT NULL, FOREIGN KEY(`signal_id`) REFERENCES `VSS_MAP`(`signal_id`) )"
+	sqlString := "CREATE TABLE " + domainName + "_MAP (`signal_id` INTEGER NOT NULL, `handle` TEXT NOT NULL, `scale` FLOAT DEFAULT 1.0, `offset` FLOAT DEFAULT 0.0, `data_type` TEXT DEFAULT 'unknown', FOREIGN KEY(`signal_id`) REFERENCES `VSS_MAP`(`signal_id`) )"
 	stmt, err := db.Prepare(sqlString)
 	checkErr(err)
 
@@ -219,6 +220,32 @@ func domainTableExists(domainName string) bool {
 	return true
 }
 
+func isMapped(domainName string, path string) bool {
+	rows, err := db.Query("SELECT `signal_id` FROM VSS_MAP WHERE `path`=?", path)
+	checkErr(err)
+	if err != nil {
+		return false
+	}
+	var signalId int
+
+	rows.Next()
+	err = rows.Scan(&signalId)
+	checkErr(err)
+	if err != nil {
+		return false
+	}
+	defer rows.Close()
+	rows, err = db.Query("SELECT `handle` FROM " + domainName + "_MAP WHERE `signal_id`=?", signalId)
+	checkErr(err)
+	if err != nil {
+		return false
+	}
+	if (rows.Next() == false) {
+	    return false
+	}
+	return true
+}
+
 func populateProprietary() {
     var domainName, command, vssPath string
     fmt.Printf("Name of non-VSS domain:")
@@ -227,7 +254,6 @@ func populateProprietary() {
         createDomainTable(domainName)
     }
     var rows *sql.Rows
-    defer rows.Close()
     if (getNonMappedPaths(domainName, &rows) == -1) {
         fmt.Printf("All VSS paths already mapped.\n")
         os.Exit(0)
@@ -241,7 +267,7 @@ func populateProprietary() {
             }
         }
         fmt.Printf("VSS path to be mapped: %s\n", vssPath)
-        fmt.Printf("\nSelect command - m(ap)/n(ext)/s(earch)/q(uit):")
+        fmt.Printf("\nSelect command - m(ap)/t(ransform)/d(atatype)/n(ext)/s(earch)/q(uit):")
         fmt.Scanf("%s", &command)
         switch command {
           case "m": fallthrough
@@ -251,7 +277,29 @@ func populateProprietary() {
               fmt.Scanf("%s", &handle)
               rows.Close() // unlock DB for createMap()
               createMap(domainName, vssPath, handle)
+              doTransformation(domainName, vssPath)
+              doDatatype(domainName, vssPath)
               getNonMappedPaths(domainName, &rows)  // restart
+          case "t": fallthrough
+          case "transform":
+              if (isMapped(domainName, vssPath) == true) {
+                  rows.Close() // unlock DB for doTransformation()
+                  doTransformation(domainName, vssPath)
+                  getNonMappedPaths(domainName, &rows)  // restart
+              } else {
+                  fmt.Printf("The path must be mapped first.\n")
+                  command = "s"
+              }
+          case "d": fallthrough
+          case "datatype":
+              if (isMapped(domainName, vssPath) == true) {
+                  rows.Close() // unlock DB for doDatatype()
+                  doDatatype(domainName, vssPath)
+                  getNonMappedPaths(domainName, &rows)  // restart
+              } else {
+                  fmt.Printf("The path must be mapped first.\n")
+                  command = "s"
+              }
           case "n": fallthrough
           case "next": continue
           case "s": fallthrough
@@ -272,7 +320,9 @@ func populateProprietary() {
                       }
               }
           case "q": fallthrough
-          case "quit": return
+          case "quit": 
+              db.Close()
+              return
           case "w" :
               var handle string
               fmt.Printf("non-VSS handle:")
@@ -280,7 +330,7 @@ func populateProprietary() {
               var value string
               fmt.Printf("Value:")
               fmt.Scanf("%s", &value)
-              rows.Close() // unlock DB for createMap()
+              rows.Close() // unlock DB for writeData()
               writeData(domainName, handle, value)
               getNonMappedPaths(domainName, &rows)  // restart
           default: 
@@ -351,5 +401,100 @@ func writeData(domainName string, handle string, value string) {
 		return
 	}
 	return
+}
+
+func doTransformation(domainName string, vssPath string) {
+              var yesno string
+              var scale string
+              var offset string
+              fmt.Printf("Do you want to enter transformation (y/n):")
+              fmt.Scanf("%s", &yesno)
+              if (yesno == "y") {
+                  fmt.Printf("Scale:")
+                  fmt.Scanf("%s", &scale)
+                  fmt.Printf("Offset:")
+                  fmt.Scanf("%s", &offset)
+                  updateTransformation(domainName, vssPath, scale, offset)
+              }
+}
+
+func updateTransformation(domainName string, path string, scaleStr string, offsetStr string) {
+	scale, err := strconv.ParseFloat(scaleStr, 8)
+	if err != nil {
+		fmt.Printf("Error converting %s to float.\n",scaleStr)
+		return
+	}
+	offset, err := strconv.ParseFloat(offsetStr, 8)
+	if err != nil {
+		fmt.Printf("Error converting %s to float.\n",offsetStr)
+		return
+	}
+	rows, err := db.Query("SELECT `signal_id` FROM VSS_MAP WHERE `path`=?", path)
+	checkErr(err)
+	if err != nil {
+		return
+	}
+	var signalId int
+
+	rows.Next()
+	err = rows.Scan(&signalId)
+	checkErr(err)
+	if err != nil {
+		return
+	}
+	rows.Close()
+	fmt.Printf("signalId=%d\n",signalId)
+	stmt, err2 := db.Prepare("UPDATE " + domainName + "_MAP SET scale=?, offset=? WHERE `signal_id`=?")
+	checkErr(err2)
+	if err2 != nil {
+		return
+	}
+
+	_, err2 = stmt.Exec(scale, offset, signalId)
+	checkErr(err2)
+	if err2 != nil {
+		return
+	}
+}
+
+func doDatatype(domainName string, vssPath string) {
+              var yesno string
+              var datatype string
+              fmt.Printf("Do you want to enter datatype (y/n):")
+              fmt.Scanf("%s", &yesno)
+              if (yesno == "y") {
+                  fmt.Printf("Datatype:")
+                  fmt.Scanf("%s", &datatype)
+                  updateDatatype(domainName, vssPath, datatype)
+              }
+}
+
+func updateDatatype(domainName string, path string, datatype string) {
+	rows, err := db.Query("SELECT `signal_id` FROM VSS_MAP WHERE `path`=?", path)
+	checkErr(err)
+	if err != nil {
+		return
+	}
+	var signalId int
+
+	rows.Next()
+	err = rows.Scan(&signalId)
+	checkErr(err)
+	if err != nil {
+		return
+	}
+	rows.Close()
+	fmt.Printf("signalId=%d\n",signalId)
+	stmt, err2 := db.Prepare("UPDATE " + domainName + "_MAP SET data_type=? WHERE `signal_id`=?")
+	checkErr(err2)
+	if err2 != nil {
+		return
+	}
+
+	_, err2 = stmt.Exec(datatype, signalId)
+	checkErr(err2)
+	if err2 != nil {
+		return
+	}
 }
 

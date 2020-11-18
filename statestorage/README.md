@@ -1,4 +1,5 @@
-The vehicle state storage is used in the Genivi CCS project as a buffer between the Data server and the underlying "native" vehicle signal subsystem. The state storage manager provides the following services in this context:<br>
+The vehicle state storage is used in the Genivi CCS project as a buffer between the Data server and the Feeder, the latter retrieving the data from the underlying "native" vehicle signal subsystem.<br><br>
+The state storage manager provides the following services in this context:<br>
 1. The creation of the SQL database that realizes this buffer.<br>
 2. Population of the database with the paths to all VSS nodes as defined at https://github.com/GENIVI/vehicle_signal_specification.<br>
 3. Creation of a mapping between VSS paths and any "non-VSS" signal address space.<br><br>
@@ -19,13 +20,19 @@ The dialogue supporting the mapping is only providing the most essential functio
 - Go to the next non-mapped VSS path<br>
 - Search among non-mapped VSS path for a path to map.<br>
 - Quit the dialogue.<br><br>
+Mapping also supports storage of parameters for a linear scaling of the data. Linear scaling means a transformation y = A * x + B. 
+The parameters A (scale) and B (offset) can be saved in the statestorage DB. The values must be entered as an integer or float value. If skipped the values A=1.0, B= 0 are stored.<br>
+It is also possible to store the datatype of the VSS signal. The input is of string type, and any string value is accepted.<br>
+The linear transformation data, and the data type are meant to be used by the feeder when entering data into the state storage, i. e. that the feeder may read this data from the DB, using the same handle as when writing the data to the DB. It is up to the feeder to do an eventual transformation, before entering the data, the statestorage does not handle that automatically.<br>
+The datatype is also meant to be helpful information for the feeder. As data is input into he statestorage in string format, it is important for the feeder to format it correctly. Integers must not contain any decimals, or a decimal dot, while float/double must contain both.<br>
 The manager does currently not support change of already mapped signals, or removal of entire "non-VSS" mapping tables. 
 As the databae is a standard SQL database, standard SQL tools can be used for that.<br><br>
-The manager is not meant to be used when the database is used for transferring data from a non-VSS domain to the VSS domain. 
-In the CSS context there will then be a "feeder" in the non-VSS domain that writes data into the database, and the Data server that reads data into the VSS domain. 
-The feeder can be coded in any language, but the SQL query for writing into the database will look (more or less) the same in all languages. 
-As a help for the coding of a feeder the query, as it looks in a Go language context.
+The statestorage manager is not meant to be used when the database is used for transferring data from a non-VSS domain to the VSS domain. 
+In the CSS context it is the Feeder in the non-VSS domain that writes data into the database, and the Data server that reads data in the VSS domain. 
+The Feeder can be coded in any language, but the SQL query for writing into the database will look (more or less) the same in all languages.<br>
+A help for the coding of a Feeder query, as it looks in a Go language context, are shown below. 
 The non-VSS address space is in this example assumed to be called XXX, hence the table is named XXX_MAP.<br>
-First get the signal_id associated to the non-VSS handle by this query: "SELECT signal_id FROM XXX_MAP WHERE handle=?"<br>
-Then write the value and timestamp by this query: "UPDATE VSS_MAP SET value=?, timestamp=? WHERE signal_id=?"
+To get the linear transformation data, and the datatype:  "SELECT scale, offset, data_type FROM XXX_MAP WHERE handle=?"<br>
+To get the signal_id associated to the non-VSS handle: "SELECT signal_id FROM XXX_MAP WHERE handle=?"<br>
+Then to write the value and timestamp: "UPDATE VSS_MAP SET value=?, timestamp=? WHERE signal_id=?"
 The timestamp should follow the ISO8601 format "YYYY-MM-DDTHH:MM:SS.ssssssZ", where the sub-second part is optional.
