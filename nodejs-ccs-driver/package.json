@@ -1,0 +1,32 @@
+{
+	"name": "nodejs-ccs-driver",
+	"version": "1.0.0",
+	"description": "Simple nodejs driver for CCS.",
+	"main": "index.js",
+	"scripts": {
+		"test": "node index.js"
+	},
+	"dependencies": {
+		"mysql": "*",
+		"websocket": "*",
+		"filereader": "*"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+ssh://git@github.com/basanjeev/ccs-w3c-client.git"
+	},
+	"scripts": {
+		"start": "node index.js"
+	},
+	"keywords": [
+		"ccs",
+		"client",
+		"nodejs"
+	],
+	"author": "Sanjeev BA",
+	"license": "Apache 2.0",
+	"bugs": {
+		"url": "https://github.com/basanjeev/ccs-w3c-client/issues"
+	},
+	"homepage": "https://github.com/basanjeev/ccs-w3c-client#readme"
+}

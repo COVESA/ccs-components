@@ -55,25 +55,28 @@ func fileExists(filename string) bool {
 	return !info.IsDir()
 }
 
-func InitDb(dbFile string, isNewDB bool) {
-	if (isNewDB == true && fileExists(dbFile)) {
+func InitNewDb(dbFile string) {
+	if (fileExists(dbFile)) {
 		fmt.Printf("\ndataStorageMgr: DB %s already exist, cannot create a new with same name.\n", dbFile)
 		os.Exit(1)
-	} else if (fileExists(dbFile)) {
+	}
+	db, dbErr = sql.Open("sqlite3", dbFile) // Creates a new dbFile(?)
+	checkErr(dbErr)
+	err := createStaticTables()
+	if err != 0 {
+		fmt.Printf("\novdsServer: Unable to make static tables : %s\n", err)
+		os.Exit(1)
+	}
+}
+
+func InitExistingDb(dbFile string) {
+	if (fileExists(dbFile)) {
 		db, dbErr = sql.Open("sqlite3", dbFile)
 		checkErr(dbErr)
-		if (isNewDB == true) {
- 		    err := createStaticTables()
-		    if err != 0 {
-			    fmt.Printf("\novdsServer: Unable to create static tables : %s\n", err)
-			    os.Exit(1)
-		    }
-		}
 	} else {
 		fmt.Printf("\nDB %s must exist, or else the statestorage manager must be started also with a filename to a JSON pathlist.\nSee README\n", dbFile)
 		os.Exit(1)
 	}
-
 }
 
 func jsonToStructList(jsonList string, elements int) int {
@@ -288,9 +291,8 @@ func populateProprietary() {
 }
 
 func main() {
-
         if (len(os.Args) == 3) {
-            InitDb(os.Args[1], true)
+            InitNewDb(os.Args[1])
             defer db.Close()
             if (populateVSS(os.Args[2]) == -1) {
                 fmt.Printf("Failed to populate DB with VSS paths\n")
@@ -299,7 +301,7 @@ func main() {
             fmt.Printf("\nDone.\n")
             os.Exit(0)
         } else if (len(os.Args) == 2) {
-            InitDb(os.Args[1], false)
+            InitExistingDb(os.Args[1])
             defer db.Close()
             populateProprietary()
             os.Exit(0)
