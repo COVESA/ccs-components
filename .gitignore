@@ -1,4 +1,7 @@
 W3C_VehicleSignalInterfaceImpl
 .gitmodules
-vss-datalake/server/server
-vss-datalake/client/client
+ovds/server/server
+ovds/client/client
+*.db
+node-modules
+statestorage/statestorage
