@@ -35,13 +35,13 @@ func createStaticTables() int {
 	_, err = stmt1.Exec()
 	checkErr(err)
 
-        stmt2, err2 := db.Prepare(`CREATE TABLE "NATIVE_VALUE" ( "signal_id" INTEGER NOT NULL, "int_value" INTEGER, "float_value" FLOAT, "boolean_value" BOOLEAN, FOREIGN KEY("signal_id") REFERENCES "VSS_MAP"("signal_id") )`)
+/*        stmt2, err2 := db.Prepare(`CREATE TABLE "NATIVE_VALUE" ( "signal_id" INTEGER NOT NULL, "int_value" INTEGER, "float_value" FLOAT, "boolean_value" BOOLEAN, FOREIGN KEY("signal_id") REFERENCES "VSS_MAP"("signal_id") )`)
         checkErr(err2)
 
 	_, err2 = stmt2.Exec()
-	checkErr(err2)
+	checkErr(err2)*/
 
-	if err != nil || err2 != nil {
+	if err != nil /*|| err2 != nil*/ {
 		return -1
 	}
 	return 0
@@ -65,7 +65,7 @@ func InitDb(dbFile string, isNewDB bool) {
 		if (isNewDB == true) {
  		    err := createStaticTables()
 		    if err != 0 {
-			    fmt.Printf("\novdsServer: Unable to make static tables : %s\n", err)
+			    fmt.Printf("\novdsServer: Unable to create static tables : %s\n", err)
 			    os.Exit(1)
 		    }
 		}
@@ -137,7 +137,7 @@ func populateVSS(vssPathFile string) int {
 }
 
 func createDomainTable(domainName string) {
-	sqlString := "CREATE TABLE " + domainName + "_MAP (`signal_id` INTEGER NOT NULL, `handle` TEXT NOT NULL, FOREIGN KEY(`signal_id`) REFERENCES `VSS_MAP`(`signal_id`) )"
+	sqlString := "CREATE TABLE " + domainName + "_MAP (`signal_id` INTEGER NOT NULL, `handle` TEXT NOT NULL, `scale` FLOAT DEFAULT 1.0, `offset` FLOAT DEFAULT 0.0, `data_type` TEXT DEFAULT 'unknown', FOREIGN KEY(`signal_id`) REFERENCES `VSS_MAP`(`signal_id`) )"
 	stmt, err := db.Prepare(sqlString)
 	checkErr(err)
 
