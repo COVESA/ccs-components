@@ -15,20 +15,10 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"unsafe"
 
 	"fmt"
 	"time"
-        "sort"
 )
-
-// #include <stdlib.h>
-// #include <stdio.h>
-// #include <stdbool.h>
-// #include "vssparserutilities.h"
-import "C"
-
-var VSSTreeRoot C.long
 
 var gen2Url string
 var ovdsUrl string
@@ -45,77 +35,21 @@ func pathToUrl(path string) string {
 	return "/" + url
 }
 
-func fileExists(filename string) bool {
-	info, err := os.Stat(filename)
-	if os.IsNotExist(err) {
-		return false
-	}
-	return !info.IsDir()
-}
-
-func jsonToStructList(jsonList string, elements int) int {
-	err := json.Unmarshal([]byte(jsonList), &pathList) //exclude curly braces when only one key-value pair
+func jsonToStructList(jsonList string) int {
+	err := json.Unmarshal([]byte(jsonList), &pathList)
 	if err != nil {
 		fmt.Printf("Error unmarshal json=%s\n", err)
 		return -1
 	}
-	/*    var listElement ListElement
-	frontBoundary := -1
-	for i := 0 ; i < elements ; i++ {
-		frontBoundary = strings.Index(jsonList[frontBoundary+1:len(jsonList)], "{")
-		fmt.Printf("Inside jsonToStructList. frontBoundary=%d\n", frontBoundary)
-		if (frontBoundary == -1) {
-			return -1
-		}
-		endBoundary := strings.Index(jsonList[frontBoundary:len(jsonList)], "}")
-		err := json.Unmarshal([]byte(jsonList[frontBoundary+1:endBoundary+1]), &listElement)  //exclude curly braces when only one key-value pair
-		if err != nil {
-			fmt.Printf("Error unmarshal json %s ; %s\n", jsonList[frontBoundary+1:endBoundary+1], err)
-			return -1
-		}
-		nodeList = append(nodeList, listElement)
-	}*/
 	return 0
 }
 
 func createListFromFile(fname string) int {
 	data, err := ioutil.ReadFile(fname)
 	if err != nil {
-		fmt.Printf("Error reading %s: %s\n", fname, err)
 		return -1
 	}
-	elements := strings.Count(string(data), "{")
-	fmt.Printf("Before jsonToStructList. elements=%d\n", elements)
-	return jsonToStructList(string(data), elements)
-}
-
-func sortPathList(listFname string) {
-	data, err := ioutil.ReadFile(listFname)
-	if err != nil {
-		fmt.Printf("Error reading %s: %s\n", listFname, err)
-		return
-	}
-	err = json.Unmarshal([]byte(data), &pathList)
-	if err != nil {
-		fmt.Printf("Error unmarshal json=%s\n", err)
-		return
-	}
-	sort.Strings(pathList.LeafPaths)
-	file, _ := json.Marshal(pathList)
-	_ = ioutil.WriteFile(listFname, file, 0644)
-}
-
-func createListFromTree(treeFname string, listFname string) int {
-	// call int VSSGetLeafNodesList(long rootNode, char* leafNodeList);
-	ctreeFname := C.CString(treeFname)
-	vssRoot := C.VSSReadTree(ctreeFname)
-	C.free(unsafe.Pointer(ctreeFname))
-	clistFname := C.CString(listFname)
-	//    var matches C.int =
-	C.VSSGetLeafNodesList(vssRoot, clistFname)
-	C.free(unsafe.Pointer(clistFname))
-	sortPathList(listFname)
-	return createListFromFile(listFname)
+	return jsonToStructList(string(data))
 }
 
 func saveListAsFile(fname string) {
@@ -218,7 +152,11 @@ func runList(trimList bool) {
 	elements := len(pathList.LeafPaths)
 	for i := 0; i < elements; i++ {
 		response := getGen2Response(pathList.LeafPaths[i])
-		if strings.Contains(response, "error") {
+		if (len(response) == 0) {
+		    fmt.Printf("\nrunList: Cannot connect to server.\n")
+		    os.Exit(-1)
+		}
+		if (strings.Contains(response, "error") == true) {
 			fmt.Printf("runList: Error in response= %s ", response)
 			if trimList {
 				copy(pathList.LeafPaths[i:], pathList.LeafPaths[i+1:])
@@ -233,30 +171,30 @@ func runList(trimList bool) {
 
 func main() {
 
-	if len(os.Args) != 7 {
-		fmt.Printf("CCS client command line: ./client pathlist-filename gen2-server-url OVDS-server-url vss-tree-filename vin sleeptime\n")
+	if len(os.Args) != 5 {  // 7-> 5;  2->1 3->2 5->3 6->4  (1 och 4 deletas) 
+//		fmt.Printf("CCS client command line: ./client pathlist-filename gen2-server-url OVDS-server-url vss-tree-filename vin sleeptime\n")
+		fmt.Printf("CCS client command line: ./client gen2-server-url OVDS-server-url vin sleeptime\n")
 		os.Exit(1)
 	}
-	sleep, _ := strconv.Atoi(os.Args[6])
-	gen2Url = os.Args[2]
-	ovdsUrl = os.Args[3]
-	thisVin = os.Args[5]
-	if fileExists(os.Args[1]) {
-		if createListFromFile(os.Args[1]) != 0 {
-			fmt.Printf("Failed in createListFromFile\n")
-			os.Exit(1)
-		}
-	} else {
-		if createListFromTree(os.Args[4], os.Args[1]) != 0 {
-			fmt.Printf("Failed in createListFromTree\n")
-			os.Exit(1)
-		}
-		fmt.Printf("After createListFromTree\n")
-		runList(true)
-		saveListAsFile(os.Args[1])
+	gen2Url = os.Args[1]
+	ovdsUrl = os.Args[2]
+	thisVin = os.Args[3]
+	sleep, _ := strconv.Atoi(os.Args[4])
+
+	if createListFromFile("vsspathlist.json") != 0 {
+	    if createListFromFile("../vsspathlist.json") != 0 {
+		fmt.Printf("Failed in creating list from vsspathlist.json\n")
+		os.Exit(1)
+	    }
 	}
+
+	fmt.Printf("Client starts to read from VISSv2 server, and write to OVDS server..\n")
+	runList(true)
+	saveListAsFile("vsspathlist.json")
+	fmt.Printf("Client saved in vsspathlist.json the paths that responded without error.\nClient will continue after %d secs of sleep..\n", sleep)
+
 	for {
-		runList(false)
 		time.Sleep(time.Duration(sleep) * time.Second)
+		runList(false)
 	}
 }

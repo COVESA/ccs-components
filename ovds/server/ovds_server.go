@@ -15,6 +15,7 @@ import (
     "os"
     "strconv"
     "strings"
+    "sort"
     "unsafe"
 
     "database/sql"
@@ -589,6 +590,35 @@ fmt.Printf("nextQuoteMark=%d\n\n", nextQuoteMark(resp[arrayFront:]))
     return resp
 }
 
+type PathList struct {
+	LeafPaths []string
+}
+var pathList PathList
+
+func sortPathList(listFname string) {
+	data, err := ioutil.ReadFile(listFname)
+	if err != nil {
+		fmt.Printf("Error reading %s: %s\n", listFname, err)
+		return
+	}
+	err = json.Unmarshal([]byte(data), &pathList)
+	if err != nil {
+		fmt.Printf("Error unmarshal json=%s\n", err)
+		return
+	}
+	sort.Strings(pathList.LeafPaths)
+	file, _ := json.Marshal(pathList)
+	_ = ioutil.WriteFile(listFname, file, 0644)
+}
+
+func createPathListFile(listFname string) {
+	// call int VSSGetLeafNodesList(long rootNode, char* leafNodeList);
+	clistFname := C.CString(listFname)
+	C.VSSGetLeafNodesList(VSSTreeRoot, clistFname)
+	C.free(unsafe.Pointer(clistFname))
+	sortPathList(listFname)
+}
+
 func main() {
 
         if (len(os.Args) != 3) {
@@ -604,8 +634,12 @@ func main() {
 		fmt.Println("VSS tree file not found")
 		os.Exit(1)
 	}
+
+	createPathListFile("../vsspathlist.json")  // save in ovds directory, where ovds client will expect it to be
+
         InitDb(os.Args[1])
         defer db.Close()
+
         go initOVDSServer(serverChan, muxServer)
 
 	for {

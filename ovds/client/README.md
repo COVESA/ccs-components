@@ -1,13 +1,15 @@
 The CCS client is started as shown in the command line example below
 
-$ ./ccs-client pathlist-filename gen2-server-url ovds-server-url vss-tree-filename vin sleeptime<br>
+$ ./ccs_client gen2-server-url ovds-server-url vin sleeptime<br>
 An example could look like:<br>
-$ ./client vsspathlist.json gen2_server.w3.org 192.168.8.108 ../server/vss_rel_2.0.0-alpha+006.cnative GEO001 30
+$ ./client gen2_server.w3.org 192.168.8.108 GEO001 30
 
-If the pathlist-filename points to a non-existent file, the CCS-client will create one from a local VSS tree file, then named vsspathlist.json.
+The CCS client will at startup look for the file "vsspathlist.json" in its own directory, if not found there it will check its parent directory for it. 
+The latter directory is where the OVDS server will store the file after it has created it from the VSS tree file that it reads at startup. 
+
 It will issue get requests on all leaf nodes in the tree, and for all nodes where a successful response is received, 
-it will save the path in the pathlist file. 
+it will save the path in the vsspathlist.json file in its own directory. 
 An existing path list file can be edited manually, and read by the CCS client after restart. 
-The get requests are issued in the order in the list, after the list is run through, 
-the CCS client go into sleep the number of secons given by sleeptime, then it starts with going through the list again.
+The get requests are issued in the order in the list.
+After the list is run through, the CCS client go into sleep the number of seconds given by sleeptime, then it starts with going through the list again.
 
