@@ -258,7 +258,7 @@ func readTvValue(vinId int, uuid string, from string, to string, maxSamples int)
 
 func createTvVin(vinId int) {
 	tableName := "TV_" + strconv.Itoa(vinId)
-	sqlString := "CREATE TABLE " + tableName + " (`value` TEXT NOT NULL, `timestamp` TEXT NOT NULL, `uuid` TEXT)"
+	sqlString := "CREATE TABLE " + tableName + " (`value` TEXT NOT NULL, `timestamp` TEXT NOT NULL, `uuid` TEXT, UNIQUE(`uuid`, `timestamp`) ON CONFLICT IGNORE)"
 	stmt, err := db.Prepare(sqlString)
 	checkErr(err)
 
