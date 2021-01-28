@@ -8,7 +8,7 @@ If the database file does not exist, it creates an SQLite database with the prov
 CREATE TABLE "VIN_TIV" ( "vin_id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, "vin" TEXT NOT NULL )
 CREATE TABLE "TIV" ( "vin_id" INTEGER NOT NULL, "uuid" TEXT NOT NULL, "value" TEXT NOT NULL, FOREIGN KEY("vin_id") REFERENCES "VIN_TIV"("vin_id") )
 
-The server supports the methods get/set/getmetadata. These methods are requested by the client via HTTP POST, with a JSON payload that specifies which method is requested, and the accompanying input parameters, see examples below (also found in ovds-request-examples.txt).
+The server supports the methods get/set. These methods are requested by the client via HTTP POST, with a JSON payload that specifies which method is requested, and the accompanying input parameters, see examples below.
 
 
 {"action":"get", "vin": "YV1DZ8256C2271234", "path":"Vehicle/Cabin/Door/Row1/Left/IsOpen", "from":"2020-01-01T02:59:43.492750Z", "to":"2020-03-31T02:59:43.492750Z"} // get specified period<br>
@@ -19,8 +19,7 @@ The server supports the methods get/set/getmetadata. These methods are requested
 
 {"action":"set", "vin": "YV1DZ8256C2271234", "path":"Vehicle/Cabin/Door/Row1/Left/IsOpen", "value": "true", "timestamp":"2020-01-10T02:59:43.492Z"}
 
-
-{"action":"getmetadata", "vin": "YV1DZ8256C2271234", "path":"Vehicle/Cabin/Door/", "depth": "2"}
+Set requeststo the same VIN and path are ignored if there already is an entry in the DB for the provided timestamp. 
 
 When a request contains a VIN that has not been entered into the database before, a new table for this VIN is created:
 
