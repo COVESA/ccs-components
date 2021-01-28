@@ -281,7 +281,7 @@ func makeOVDSServerHandler(serverChannel chan string) func(http.ResponseWriter, 
 				fmt.Printf("OVDSserver:received POST request=%s\n", string(bodyBytes))
 				serverChannel <- string(bodyBytes)
 				response := <- serverChannel
-				fmt.Printf("OVDSserver:POST response=%s", response)
+				fmt.Printf("OVDSserver:POST response=%s\n", response)
                                 if (len(response) == 0) {
                                     http.Error(w, "400 bad input.", 400)
                                 } else {
@@ -492,22 +492,41 @@ func OVDSGetValue(reqMap map[string]interface{}) (string, int) {
 	return response, 0
 }
 
+func extractData(dataMap map[string]interface{}) (string, string, string) {
+//    var dataMap = make(map[string]interface{})
+//    jsonToMap(data, &dataMap)
+    if dataMap["path"] == nil {
+	return "", "", ""
+    }
+    path := dataMap["path"].(string)
+    value, ts := extractDp(dataMap["dp"].(map[string]interface{}))
+    return path, value, ts
+}
+
+func extractDp(dpMap map[string]interface{}) (string, string) {
+//    var dpMap = make(map[string]interface{})
+//    jsonToMap(dataPoint, &dpMap)
+    if dpMap["value"] == nil {
+	return "", ""
+    }
+    value := dpMap["value"].(string)
+    if dpMap["ts"] == nil {
+	return value, ""
+    }
+    return value, dpMap["ts"].(string)
+}
+
 func OVDSSetValue(reqMap map[string]interface{}) string {
 	if reqMap["vin"] == nil {
 		return "VIN missing"
 	}
 	vin := reqMap["vin"].(string)
-	if reqMap["path"] == nil {
-		return "Path missing"
+	if reqMap["data"] == nil {
+		return "Data missing"
 	}
-	path := reqMap["path"].(string)
-	if reqMap["value"] == nil {
-		return "Value missing"
-	}
-	value := reqMap["value"].(string)
-	var timestamp string
-	if reqMap["timestamp"] != nil {
-		timestamp = reqMap["timestamp"].(string)
+	path, value, timestamp := extractData(reqMap["data"].(map[string]interface{}))
+	if len(path) == 0 {
+		return "Data invalid"
 	}
 	output, matches := getVssDbMapping(path)
 	if matches != 1 {
@@ -518,7 +537,7 @@ func OVDSSetValue(reqMap map[string]interface{}) string {
 	uuid := dbMap["uuid"].(string)
 	nodetype := dbMap["nodetype"].(string)
 	//fmt.Printf("nodetype=%s\n", nodetype)
-	if nodetype != "ATTRIBUTE" && reqMap["timestamp"] == nil {
+	if nodetype != "ATTRIBUTE" && len(timestamp) == 0 {
 		return "Timestamp missing"
 	}
 	vinId := readVinId(vin)

@@ -39,15 +39,16 @@ func jsonToStructList(jsonList string) int {
 	err := json.Unmarshal([]byte(jsonList), &pathList)
 	if err != nil {
 		fmt.Printf("Error unmarshal json=%s\n", err)
-		return -1
+		pathList.LeafPaths = nil
+		return 0
 	}
-	return 0
+	return len(pathList.LeafPaths)
 }
 
 func createListFromFile(fname string) int {
 	data, err := ioutil.ReadFile(fname)
 	if err != nil {
-		return -1
+		return 0
 	}
 	return jsonToStructList(string(data))
 }
@@ -100,26 +101,26 @@ func getGen2Response(path string) string {
 	return string(body)
 }
 
-func writeToOVDS(response string, path string) {
+func writeToOVDS(data string, path string) {
 	/*        type DataPoint struct {
 		Value string
 		Timestamp string
 	}
-	jsonizedResponse := `{"datapoint":` + response + "}"
-	fmt.Printf("writeToOVDS: Response= %s \n", jsonizedResponse)
+	jsonizedResponse := `{"datapoint":` + data + "}"
+	fmt.Printf("writeToOVDS: Data= %s \n", jsonizedResponse)
 	var dataPoint DataPoint
 	err := json.Unmarshal([]byte(jsonizedResponse), &dataPoint)
 	if err != nil {
-		fmt.Printf("writeToOVDS: Error JSON decoding of response= %s \n", err)
+		fmt.Printf("writeToOVDS: Error JSON decoding of data= %s \n", err)
 		return
 	}*/
 	url := "http://" + ovdsUrl + ":8765/ovdsserver"
-	fmt.Printf("writeToOVDS: response = %s\n", response)
+	fmt.Printf("writeToOVDS: data = %s\n", data)
 
-	data := `{"action":"set", "vin":"` + thisVin + `" ,"path":"` + path + `", ` + response[1:]
-	fmt.Printf("writeToOVDS: request payload= %s \n", data)
+	payload := `{"action":"set", "vin":"` + thisVin + `" , ` +  data[1:]
+	fmt.Printf("writeToOVDS: request payload= %s \n", payload)
 
-	req, err := http.NewRequest("POST", url, strings.NewReader(data)) //bytes.NewBuffer(data))
+	req, err := http.NewRequest("POST", url, strings.NewReader(payload)) //bytes.NewBuffer(payload))
 	if err != nil {
 		fmt.Printf("writeToOVDS: Error creating request= %s \n", err)
 		return
@@ -148,53 +149,44 @@ func writeToOVDS(response string, path string) {
 		}*/
 }
 
-func runList(trimList bool) {
-	elements := len(pathList.LeafPaths)
+func runList(elements int, sleepTime int) {
 	for i := 0; i < elements; i++ {
 		response := getGen2Response(pathList.LeafPaths[i])
 		if (len(response) == 0) {
 		    fmt.Printf("\nrunList: Cannot connect to server.\n")
 		    os.Exit(-1)
 		}
-		if (strings.Contains(response, "error") == true) {
-			fmt.Printf("runList: Error in response= %s ", response)
-			if trimList {
-				copy(pathList.LeafPaths[i:], pathList.LeafPaths[i+1:])
-				pathList.LeafPaths = pathList.LeafPaths[:len(pathList.LeafPaths)-1]
-			}
-		} else {
-			writeToOVDS(response, pathList.LeafPaths[i])
-		}
-		time.Sleep(5 * time.Millisecond)
+		writeToOVDS(response, pathList.LeafPaths[i])
+	        time.Sleep((time.Duration)(sleepTime) * time.Millisecond)
 	}
+	fmt.Printf("\n****************** Iteration done ************************************\n")
 }
 
 func main() {
 
-	if len(os.Args) != 5 {  // 7-> 5;  2->1 3->2 5->3 6->4  (1 och 4 deletas) 
-//		fmt.Printf("CCS client command line: ./client pathlist-filename gen2-server-url OVDS-server-url vss-tree-filename vin sleeptime\n")
-		fmt.Printf("CCS client command line: ./client gen2-server-url OVDS-server-url vin sleeptime\n")
+	if len(os.Args) != 5 {
+		fmt.Printf("CCS client command line: ./client gen2-server-url OVDS-server-url vin list-iteration-time\n")
 		os.Exit(1)
 	}
 	gen2Url = os.Args[1]
 	ovdsUrl = os.Args[2]
 	thisVin = os.Args[3]
-	sleep, _ := strconv.Atoi(os.Args[4])
+	iterationPeriod, _ := strconv.Atoi(os.Args[4])
 
-	if createListFromFile("vsspathlist.json") != 0 {
-	    if createListFromFile("../vsspathlist.json") != 0 {
+	if createListFromFile("vsspathlist.json") == 0 {
+	    if createListFromFile("../vsspathlist.json") == 0 {
 		fmt.Printf("Failed in creating list from vsspathlist.json\n")
 		os.Exit(1)
 	    }
 	}
 
 	fmt.Printf("Client starts to read from VISSv2 server, and write to OVDS server..\n")
-	runList(true)
-	saveListAsFile("vsspathlist.json")
-	fmt.Printf("Client saved in vsspathlist.json the paths that responded without error.\nClient will continue after %d secs of sleep..\n", sleep)
-
+	elements := len(pathList.LeafPaths)
+	sleepTime := (iterationPeriod*1000-elements*30)/elements  // 30 = estimated time in msec for one roundtrip - get data from VISSv2 server, write data to OVDS
+	if (sleepTime < 1) {
+	    sleepTime = 1
+	}
 	for {
-		time.Sleep(time.Duration(sleep) * time.Second)
-		runList(false)
+		runList(elements, sleepTime)
 	}
 }
