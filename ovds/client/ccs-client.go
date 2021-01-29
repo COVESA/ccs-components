@@ -12,15 +12,19 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
+	"net/url"
+	"flag"
 	"os"
 	"strconv"
 	"strings"
 
 	"fmt"
 	"time"
+
+	"github.com/gorilla/websocket"
 )
 
-var gen2Url string
+var vissv2Url string
 var ovdsUrl string
 var thisVin string
 
@@ -68,7 +72,7 @@ func saveListAsFile(fname string) {
 }
 
 func getGen2Response(path string) string {
-	url := "http://" + gen2Url + ":8888" + pathToUrl(path)
+	url := "http://" + vissv2Url + ":8888" + pathToUrl(path)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -79,7 +83,7 @@ func getGen2Response(path string) string {
 	// Set headers
 	req.Header.Set("Access-Control-Allow-Origin", "*")
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Host", gen2Url+":8888")
+	req.Header.Set("Host", vissv2Url+":8888")
 
 	// Set client timeout
 	client := &http.Client{Timeout: time.Second * 10}
@@ -101,26 +105,14 @@ func getGen2Response(path string) string {
 	return string(body)
 }
 
-func writeToOVDS(data string, path string) {
-	/*        type DataPoint struct {
-		Value string
-		Timestamp string
-	}
-	jsonizedResponse := `{"datapoint":` + data + "}"
-	fmt.Printf("writeToOVDS: Data= %s \n", jsonizedResponse)
-	var dataPoint DataPoint
-	err := json.Unmarshal([]byte(jsonizedResponse), &dataPoint)
-	if err != nil {
-		fmt.Printf("writeToOVDS: Error JSON decoding of data= %s \n", err)
-		return
-	}*/
+func writeToOVDS(data string) {
 	url := "http://" + ovdsUrl + ":8765/ovdsserver"
 	fmt.Printf("writeToOVDS: data = %s\n", data)
 
-	payload := `{"action":"set", "vin":"` + thisVin + `" , ` +  data[1:]
+	payload := `{"action":"set", "vin":"` + thisVin + `", ` +  data[1:]
 	fmt.Printf("writeToOVDS: request payload= %s \n", payload)
 
-	req, err := http.NewRequest("POST", url, strings.NewReader(payload)) //bytes.NewBuffer(payload))
+	req, err := http.NewRequest("POST", url, strings.NewReader(payload))
 	if err != nil {
 		fmt.Printf("writeToOVDS: Error creating request= %s \n", err)
 		return
@@ -149,29 +141,104 @@ func writeToOVDS(data string, path string) {
 		}*/
 }
 
-func runList(elements int, sleepTime int) {
+func iterateGetAndWrite(elements int, sleepTime int) {
 	for i := 0; i < elements; i++ {
 		response := getGen2Response(pathList.LeafPaths[i])
 		if (len(response) == 0) {
-		    fmt.Printf("\nrunList: Cannot connect to server.\n")
+		    fmt.Printf("iterateGetAndWrite: Cannot connect to server.\n")
 		    os.Exit(-1)
 		}
-		writeToOVDS(response, pathList.LeafPaths[i])
+		writeToOVDS(response)
 	        time.Sleep((time.Duration)(sleepTime) * time.Millisecond)
 	}
-	fmt.Printf("\n****************** Iteration done ************************************\n")
+	fmt.Printf("\n\n****************** Iteration cycle over all paths completed ************************************\n\n")
+}
+
+func initVissV2WebSocket() *websocket.Conn {
+	var addr = flag.String("addr", vissv2Url + ":8080", "http service address")
+	dataSessionUrl := url.URL{Scheme: "ws", Host: *addr, Path: ""}
+	conn, _, err := websocket.DefaultDialer.Dial(dataSessionUrl.String(), nil)
+	if err != nil {
+		fmt.Printf("Data session dial error:%s\n", err)
+		os.Exit(-1)
+	}
+	return conn
+}
+
+func iterateNotificationAndWrite(conn *websocket.Conn) {
+    for {
+	_, msg, err := conn.ReadMessage()
+	if err != nil {
+	    fmt.Printf("Subscription response error: %s\n", err)
+	    return
+	}
+	message := string(msg)
+	if (strings.Contains(message, "subscribe") == true) {
+	    fmt.Printf("Subscription response:%s\n", message)
+	} else {
+	    var msgMap = make(map[string]interface{})
+	    jsonToMap(message, &msgMap)
+	    data, _ := json.Marshal(msgMap["data"])
+	    writeToOVDS(`{"data":` + string(data) + "}")
+	}
+    }
+}
+
+func jsonToMap(request string, rMap *map[string]interface{}) {
+	decoder := json.NewDecoder(strings.NewReader(request))
+	err := decoder.Decode(rMap)
+	if err != nil {
+		fmt.Printf("jsonToMap: JSON decode failed for request:%s, err=%s\n", request, err)
+	}
+}
+
+func subscribeToPaths(conn *websocket.Conn, elements int, sleepTime int) {
+	for i := 0; i < elements; i++ {
+		subscribeToPath(conn, pathList.LeafPaths[i])
+	        time.Sleep((time.Duration)(sleepTime) * time.Millisecond)
+	}
+}
+
+func subscribeToPath(conn *websocket.Conn, path string) {
+    request := `{"action":"subscribe", "path":"` + path + `", "filter":{"op-type":"capture", "op-value":"time-based", "op-extra":{"period":"3"}}, "requestId": "6578"}`
+
+    err := conn.WriteMessage(websocket.TextMessage, []byte(request))
+    if err != nil {
+	fmt.Printf("Subscribe request error:%s\n", err)
+    }
+
+}
+
+func transferData(elements int, sleepTime int, accessMode string) {
+	if (accessMode == "get") {
+	    for {
+		iterateGetAndWrite(elements, sleepTime)
+	    }
+	} else {
+	    conn := initVissV2WebSocket()
+	    go iterateNotificationAndWrite(conn)
+	    subscribeToPaths(conn, elements, sleepTime)
+	    for {
+	        time.Sleep(1000 * time.Millisecond)  // just to keep alive...
+	    }
+	}
 }
 
 func main() {
 
-	if len(os.Args) != 5 {
-		fmt.Printf("CCS client command line: ./client gen2-server-url OVDS-server-url vin list-iteration-time\n")
+	if len(os.Args) != 6 {
+		fmt.Printf("CCS client command line: ./client gen2-server-url OVDS-server-url vin list-iteration-time access-mode\n")
 		os.Exit(1)
 	}
-	gen2Url = os.Args[1]
+	vissv2Url = os.Args[1]
 	ovdsUrl = os.Args[2]
 	thisVin = os.Args[3]
 	iterationPeriod, _ := strconv.Atoi(os.Args[4])
+	accessMode := os.Args[5]
+	if (accessMode != "get" && accessMode != "subscribe") {
+		fmt.Printf("CCS client access-mode must be either get or subscribe.\n")
+		os.Exit(1)
+	}
 
 	if createListFromFile("vsspathlist.json") == 0 {
 	    if createListFromFile("../vsspathlist.json") == 0 {
@@ -180,13 +247,10 @@ func main() {
 	    }
 	}
 
-	fmt.Printf("Client starts to read from VISSv2 server, and write to OVDS server..\n")
 	elements := len(pathList.LeafPaths)
 	sleepTime := (iterationPeriod*1000-elements*30)/elements  // 30 = estimated time in msec for one roundtrip - get data from VISSv2 server, write data to OVDS
 	if (sleepTime < 1) {
 	    sleepTime = 1
 	}
-	for {
-		runList(elements, sleepTime)
-	}
+	transferData(elements, sleepTime, accessMode)
 }
