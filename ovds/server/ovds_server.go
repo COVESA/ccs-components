@@ -15,6 +15,7 @@ import (
     "os"
     "strconv"
     "strings"
+    "sort"
     "unsafe"
 
     "database/sql"
@@ -257,7 +258,7 @@ func readTvValue(vinId int, uuid string, from string, to string, maxSamples int)
 
 func createTvVin(vinId int) {
 	tableName := "TV_" + strconv.Itoa(vinId)
-	sqlString := "CREATE TABLE " + tableName + " (`value` TEXT NOT NULL, `timestamp` TEXT NOT NULL, `uuid` TEXT)"
+	sqlString := "CREATE TABLE " + tableName + " (`value` TEXT NOT NULL, `timestamp` TEXT NOT NULL, `uuid` TEXT, UNIQUE(`uuid`, `timestamp`) ON CONFLICT IGNORE)"
 	stmt, err := db.Prepare(sqlString)
 	checkErr(err)
 
@@ -280,7 +281,7 @@ func makeOVDSServerHandler(serverChannel chan string) func(http.ResponseWriter, 
 				fmt.Printf("OVDSserver:received POST request=%s\n", string(bodyBytes))
 				serverChannel <- string(bodyBytes)
 				response := <- serverChannel
-				fmt.Printf("OVDSserver:POST response=%s", response)
+				fmt.Printf("OVDSserver:POST response=%s\n", response)
                                 if (len(response) == 0) {
                                     http.Error(w, "400 bad input.", 400)
                                 } else {
@@ -491,22 +492,41 @@ func OVDSGetValue(reqMap map[string]interface{}) (string, int) {
 	return response, 0
 }
 
+func extractData(dataMap map[string]interface{}) (string, string, string) {
+//    var dataMap = make(map[string]interface{})
+//    jsonToMap(data, &dataMap)
+    if dataMap["path"] == nil {
+	return "", "", ""
+    }
+    path := dataMap["path"].(string)
+    value, ts := extractDp(dataMap["dp"].(map[string]interface{}))
+    return path, value, ts
+}
+
+func extractDp(dpMap map[string]interface{}) (string, string) {
+//    var dpMap = make(map[string]interface{})
+//    jsonToMap(dataPoint, &dpMap)
+    if dpMap["value"] == nil {
+	return "", ""
+    }
+    value := dpMap["value"].(string)
+    if dpMap["ts"] == nil {
+	return value, ""
+    }
+    return value, dpMap["ts"].(string)
+}
+
 func OVDSSetValue(reqMap map[string]interface{}) string {
 	if reqMap["vin"] == nil {
 		return "VIN missing"
 	}
 	vin := reqMap["vin"].(string)
-	if reqMap["path"] == nil {
-		return "Path missing"
+	if reqMap["data"] == nil {
+		return "Data missing"
 	}
-	path := reqMap["path"].(string)
-	if reqMap["value"] == nil {
-		return "Value missing"
-	}
-	value := reqMap["value"].(string)
-	var timestamp string
-	if reqMap["timestamp"] != nil {
-		timestamp = reqMap["timestamp"].(string)
+	path, value, timestamp := extractData(reqMap["data"].(map[string]interface{}))
+	if len(path) == 0 {
+		return "Data invalid"
 	}
 	output, matches := getVssDbMapping(path)
 	if matches != 1 {
@@ -517,7 +537,7 @@ func OVDSSetValue(reqMap map[string]interface{}) string {
 	uuid := dbMap["uuid"].(string)
 	nodetype := dbMap["nodetype"].(string)
 	//fmt.Printf("nodetype=%s\n", nodetype)
-	if nodetype != "ATTRIBUTE" && reqMap["timestamp"] == nil {
+	if nodetype != "ATTRIBUTE" && len(timestamp) == 0 {
 		return "Timestamp missing"
 	}
 	vinId := readVinId(vin)
@@ -589,6 +609,35 @@ fmt.Printf("nextQuoteMark=%d\n\n", nextQuoteMark(resp[arrayFront:]))
     return resp
 }
 
+type PathList struct {
+	LeafPaths []string
+}
+var pathList PathList
+
+func sortPathList(listFname string) {
+	data, err := ioutil.ReadFile(listFname)
+	if err != nil {
+		fmt.Printf("Error reading %s: %s\n", listFname, err)
+		return
+	}
+	err = json.Unmarshal([]byte(data), &pathList)
+	if err != nil {
+		fmt.Printf("Error unmarshal json=%s\n", err)
+		return
+	}
+	sort.Strings(pathList.LeafPaths)
+	file, _ := json.Marshal(pathList)
+	_ = ioutil.WriteFile(listFname, file, 0644)
+}
+
+func createPathListFile(listFname string) {
+	// call int VSSGetLeafNodesList(long rootNode, char* leafNodeList);
+	clistFname := C.CString(listFname)
+	C.VSSGetLeafNodesList(VSSTreeRoot, clistFname)
+	C.free(unsafe.Pointer(clistFname))
+	sortPathList(listFname)
+}
+
 func main() {
 
         if (len(os.Args) != 3) {
@@ -604,8 +653,12 @@ func main() {
 		fmt.Println("VSS tree file not found")
 		os.Exit(1)
 	}
+
+	createPathListFile("../vsspathlist.json")  // save in ovds directory, where ovds client will expect it to be
+
         InitDb(os.Args[1])
         defer db.Close()
+
         go initOVDSServer(serverChan, muxServer)
 
 	for {

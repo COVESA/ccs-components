@@ -12,25 +12,19 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
+	"net/url"
+	"flag"
 	"os"
 	"strconv"
 	"strings"
-	"unsafe"
 
 	"fmt"
 	"time"
-        "sort"
+
+	"github.com/gorilla/websocket"
 )
 
-// #include <stdlib.h>
-// #include <stdio.h>
-// #include <stdbool.h>
-// #include "vssparserutilities.h"
-import "C"
-
-var VSSTreeRoot C.long
-
-var gen2Url string
+var vissv2Url string
 var ovdsUrl string
 var thisVin string
 
@@ -45,77 +39,22 @@ func pathToUrl(path string) string {
 	return "/" + url
 }
 
-func fileExists(filename string) bool {
-	info, err := os.Stat(filename)
-	if os.IsNotExist(err) {
-		return false
-	}
-	return !info.IsDir()
-}
-
-func jsonToStructList(jsonList string, elements int) int {
-	err := json.Unmarshal([]byte(jsonList), &pathList) //exclude curly braces when only one key-value pair
+func jsonToStructList(jsonList string) int {
+	err := json.Unmarshal([]byte(jsonList), &pathList)
 	if err != nil {
 		fmt.Printf("Error unmarshal json=%s\n", err)
-		return -1
+		pathList.LeafPaths = nil
+		return 0
 	}
-	/*    var listElement ListElement
-	frontBoundary := -1
-	for i := 0 ; i < elements ; i++ {
-		frontBoundary = strings.Index(jsonList[frontBoundary+1:len(jsonList)], "{")
-		fmt.Printf("Inside jsonToStructList. frontBoundary=%d\n", frontBoundary)
-		if (frontBoundary == -1) {
-			return -1
-		}
-		endBoundary := strings.Index(jsonList[frontBoundary:len(jsonList)], "}")
-		err := json.Unmarshal([]byte(jsonList[frontBoundary+1:endBoundary+1]), &listElement)  //exclude curly braces when only one key-value pair
-		if err != nil {
-			fmt.Printf("Error unmarshal json %s ; %s\n", jsonList[frontBoundary+1:endBoundary+1], err)
-			return -1
-		}
-		nodeList = append(nodeList, listElement)
-	}*/
-	return 0
+	return len(pathList.LeafPaths)
 }
 
 func createListFromFile(fname string) int {
 	data, err := ioutil.ReadFile(fname)
 	if err != nil {
-		fmt.Printf("Error reading %s: %s\n", fname, err)
-		return -1
+		return 0
 	}
-	elements := strings.Count(string(data), "{")
-	fmt.Printf("Before jsonToStructList. elements=%d\n", elements)
-	return jsonToStructList(string(data), elements)
-}
-
-func sortPathList(listFname string) {
-	data, err := ioutil.ReadFile(listFname)
-	if err != nil {
-		fmt.Printf("Error reading %s: %s\n", listFname, err)
-		return
-	}
-	err = json.Unmarshal([]byte(data), &pathList)
-	if err != nil {
-		fmt.Printf("Error unmarshal json=%s\n", err)
-		return
-	}
-	sort.Strings(pathList.LeafPaths)
-	file, _ := json.Marshal(pathList)
-	_ = ioutil.WriteFile(listFname, file, 0644)
-}
-
-func createListFromTree(treeFname string, listFname string) int {
-	// call int VSSGetLeafNodesList(long rootNode, char* leafNodeList);
-	ctreeFname := C.CString(treeFname)
-	vssRoot := C.VSSReadTree(ctreeFname)
-	C.free(unsafe.Pointer(ctreeFname))
-	clistFname := C.CString(listFname)
-	//    var matches C.int =
-	C.VSSGetLeafNodesList(vssRoot, clistFname)
-	C.free(unsafe.Pointer(clistFname))
-	sortPathList(listFname)
-	return createListFromFile(listFname)
+	return jsonToStructList(string(data))
 }
 
 func saveListAsFile(fname string) {
@@ -133,7 +72,7 @@ func saveListAsFile(fname string) {
 }
 
 func getGen2Response(path string) string {
-	url := "http://" + gen2Url + ":8888" + pathToUrl(path)
+	url := "http://" + vissv2Url + ":8888" + pathToUrl(path)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -144,7 +83,7 @@ func getGen2Response(path string) string {
 	// Set headers
 	req.Header.Set("Access-Control-Allow-Origin", "*")
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Host", gen2Url+":8888")
+	req.Header.Set("Host", vissv2Url+":8888")
 
 	// Set client timeout
 	client := &http.Client{Timeout: time.Second * 10}
@@ -166,26 +105,14 @@ func getGen2Response(path string) string {
 	return string(body)
 }
 
-func writeToOVDS(response string, path string) {
-	/*        type DataPoint struct {
-		Value string
-		Timestamp string
-	}
-	jsonizedResponse := `{"datapoint":` + response + "}"
-	fmt.Printf("writeToOVDS: Response= %s \n", jsonizedResponse)
-	var dataPoint DataPoint
-	err := json.Unmarshal([]byte(jsonizedResponse), &dataPoint)
-	if err != nil {
-		fmt.Printf("writeToOVDS: Error JSON decoding of response= %s \n", err)
-		return
-	}*/
+func writeToOVDS(data string) {
 	url := "http://" + ovdsUrl + ":8765/ovdsserver"
-	fmt.Printf("writeToOVDS: response = %s\n", response)
+	fmt.Printf("writeToOVDS: data = %s\n", data)
 
-	data := `{"action":"set", "vin":"` + thisVin + `" ,"path":"` + path + `", ` + response[1:]
-	fmt.Printf("writeToOVDS: request payload= %s \n", data)
+	payload := `{"action":"set", "vin":"` + thisVin + `", ` +  data[1:]
+	fmt.Printf("writeToOVDS: request payload= %s \n", payload)
 
-	req, err := http.NewRequest("POST", url, strings.NewReader(data)) //bytes.NewBuffer(data))
+	req, err := http.NewRequest("POST", url, strings.NewReader(payload))
 	if err != nil {
 		fmt.Printf("writeToOVDS: Error creating request= %s \n", err)
 		return
@@ -214,49 +141,116 @@ func writeToOVDS(response string, path string) {
 		}*/
 }
 
-func runList(trimList bool) {
-	elements := len(pathList.LeafPaths)
+func iterateGetAndWrite(elements int, sleepTime int) {
 	for i := 0; i < elements; i++ {
 		response := getGen2Response(pathList.LeafPaths[i])
-		if strings.Contains(response, "error") {
-			fmt.Printf("runList: Error in response= %s ", response)
-			if trimList {
-				copy(pathList.LeafPaths[i:], pathList.LeafPaths[i+1:])
-				pathList.LeafPaths = pathList.LeafPaths[:len(pathList.LeafPaths)-1]
-			}
-		} else {
-			writeToOVDS(response, pathList.LeafPaths[i])
+		if (len(response) == 0) {
+		    fmt.Printf("iterateGetAndWrite: Cannot connect to server.\n")
+		    os.Exit(-1)
 		}
-		time.Sleep(5 * time.Millisecond)
+		writeToOVDS(response)
+	        time.Sleep((time.Duration)(sleepTime) * time.Millisecond)
+	}
+	fmt.Printf("\n\n****************** Iteration cycle over all paths completed ************************************\n\n")
+}
+
+func initVissV2WebSocket() *websocket.Conn {
+	var addr = flag.String("addr", vissv2Url + ":8080", "http service address")
+	dataSessionUrl := url.URL{Scheme: "ws", Host: *addr, Path: ""}
+	conn, _, err := websocket.DefaultDialer.Dial(dataSessionUrl.String(), nil)
+	if err != nil {
+		fmt.Printf("Data session dial error:%s\n", err)
+		os.Exit(-1)
+	}
+	return conn
+}
+
+func iterateNotificationAndWrite(conn *websocket.Conn) {
+    for {
+	_, msg, err := conn.ReadMessage()
+	if err != nil {
+	    fmt.Printf("Subscription response error: %s\n", err)
+	    return
+	}
+	message := string(msg)
+	if (strings.Contains(message, "subscribe") == true) {
+	    fmt.Printf("Subscription response:%s\n", message)
+	} else {
+	    var msgMap = make(map[string]interface{})
+	    jsonToMap(message, &msgMap)
+	    data, _ := json.Marshal(msgMap["data"])
+	    writeToOVDS(`{"data":` + string(data) + "}")
+	}
+    }
+}
+
+func jsonToMap(request string, rMap *map[string]interface{}) {
+	decoder := json.NewDecoder(strings.NewReader(request))
+	err := decoder.Decode(rMap)
+	if err != nil {
+		fmt.Printf("jsonToMap: JSON decode failed for request:%s, err=%s\n", request, err)
+	}
+}
+
+func subscribeToPaths(conn *websocket.Conn, elements int, sleepTime int) {
+	for i := 0; i < elements; i++ {
+		subscribeToPath(conn, pathList.LeafPaths[i])
+	        time.Sleep((time.Duration)(sleepTime) * time.Millisecond)
+	}
+}
+
+func subscribeToPath(conn *websocket.Conn, path string) {
+    request := `{"action":"subscribe", "path":"` + path + `", "filter":{"op-type":"capture", "op-value":"time-based", "op-extra":{"period":"3"}}, "requestId": "6578"}`
+
+    err := conn.WriteMessage(websocket.TextMessage, []byte(request))
+    if err != nil {
+	fmt.Printf("Subscribe request error:%s\n", err)
+    }
+
+}
+
+func transferData(elements int, sleepTime int, accessMode string) {
+	if (accessMode == "get") {
+	    for {
+		iterateGetAndWrite(elements, sleepTime)
+	    }
+	} else {
+	    conn := initVissV2WebSocket()
+	    go iterateNotificationAndWrite(conn)
+	    subscribeToPaths(conn, elements, sleepTime)
+	    for {
+	        time.Sleep(1000 * time.Millisecond)  // just to keep alive...
+	    }
 	}
 }
 
 func main() {
 
-	if len(os.Args) != 7 {
-		fmt.Printf("CCS client command line: ./client pathlist-filename gen2-server-url OVDS-server-url vss-tree-filename vin sleeptime\n")
+	if len(os.Args) != 6 {
+		fmt.Printf("CCS client command line: ./client gen2-server-url OVDS-server-url vin list-iteration-time access-mode\n")
 		os.Exit(1)
 	}
-	sleep, _ := strconv.Atoi(os.Args[6])
-	gen2Url = os.Args[2]
-	ovdsUrl = os.Args[3]
-	thisVin = os.Args[5]
-	if fileExists(os.Args[1]) {
-		if createListFromFile(os.Args[1]) != 0 {
-			fmt.Printf("Failed in createListFromFile\n")
-			os.Exit(1)
-		}
-	} else {
-		if createListFromTree(os.Args[4], os.Args[1]) != 0 {
-			fmt.Printf("Failed in createListFromTree\n")
-			os.Exit(1)
-		}
-		fmt.Printf("After createListFromTree\n")
-		runList(true)
-		saveListAsFile(os.Args[1])
+	vissv2Url = os.Args[1]
+	ovdsUrl = os.Args[2]
+	thisVin = os.Args[3]
+	iterationPeriod, _ := strconv.Atoi(os.Args[4])
+	accessMode := os.Args[5]
+	if (accessMode != "get" && accessMode != "subscribe") {
+		fmt.Printf("CCS client access-mode must be either get or subscribe.\n")
+		os.Exit(1)
 	}
-	for {
-		runList(false)
-		time.Sleep(time.Duration(sleep) * time.Second)
+
+	if createListFromFile("vsspathlist.json") == 0 {
+	    if createListFromFile("../vsspathlist.json") == 0 {
+		fmt.Printf("Failed in creating list from vsspathlist.json\n")
+		os.Exit(1)
+	    }
 	}
+
+	elements := len(pathList.LeafPaths)
+	sleepTime := (iterationPeriod*1000-elements*30)/elements  // 30 = estimated time in msec for one roundtrip - get data from VISSv2 server, write data to OVDS
+	if (sleepTime < 1) {
+	    sleepTime = 1
+	}
+	transferData(elements, sleepTime, accessMode)
 }
