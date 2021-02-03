@@ -24,9 +24,10 @@ import (
 )
 
 // #include <stdlib.h>
+// #include <stdint.h>
 // #include <stdio.h>
 // #include <stdbool.h>
-// #include "vssparserutilities.h"
+// #include "cparserlib.h"
 import "C"
 
 var VSSTreeRoot C.long
@@ -237,7 +238,7 @@ func readTvValue(vinId int, uuid string, from string, to string, maxSamples int)
 		if err != nil {
 			return ""
 		}
-		datapoints += `{"value": "` + value + `", "timestamp": "` + timestamp + `"}, `
+		datapoints += `{"value": "` + value + `", "ts": "` + timestamp + `"}, `
 		numOfDatapoints++
 		if (numOfDatapoints == maxSamples) {
 		    break
@@ -335,17 +336,13 @@ func initVssFile(filePath string) C.long {
 
 func translateNodeType(nodeType int) string {
 	switch nodeType {
-	case 9:
-		return "STRING"
-	case 10:
+	case 1:
 		return "SENSOR"
-	case 11:
+	case 2:
 		return "ACTUATOR"
-	case 12:
-		return "STREAM"
-	case 13:
+	case 3:
 		return "ATTRIBUTE"
-	case 14:
+	case 4:
 		return "BRANCH"
 	}
 	return "unknown nodetype"
@@ -353,24 +350,26 @@ func translateNodeType(nodeType int) string {
 
 func translateDataType(dataType int) string {
 	switch dataType {
-	case 0:
-		return "INT8"
 	case 1:
-		return "UINT8"
+		return "INT8"
 	case 2:
-		return "INT16"
+		return "UINT8"
 	case 3:
-		return "UINT16"
+		return "INT16"
 	case 4:
-		return "INT32"
+		return "UINT16"
 	case 5:
-		return "UINT32"
+		return "INT32"
 	case 6:
-		return "DOUBLE"
+		return "UINT32"
 	case 7:
-		return "FLOAT"
+		return "DOUBLE"
 	case 8:
+		return "FLOAT"
+	case 9:
 		return "BOOLEAN"
+	case 10:
+		return "STRING"
 	}
 	return "unknown datatype"
 }
@@ -390,8 +389,9 @@ func getPathLen(path string) int {
 }
 
 func getVssDbMapping(path string) (string, int) {
-	// call int VSSSearchNodes(char* searchPath, long rootNode, int maxFound, searchData_t* searchData, bool anyDepth, bool leafNodesOnly, int* validation);
-	searchData := [1500]searchData_t{} // vssparserutilities.h: #define MAXFOUNDNODES 1500
+       // call int VSSSearchNodes(char* searchPath, long rootNode, int maxFound, searchData_t* searchData, bool anyDepth, bool leafNodesOnly, int listSize, noScopeList_t* noScopeList, 
+       //                         int* validation);
+	searchData := [1500]searchData_t{} // cparserlib.h: #define MAXFOUNDNODES 1500
 	var anyDepth C.bool = false
 	if path[len(path)-1] == '*' {
 		anyDepth = true
@@ -399,7 +399,8 @@ func getVssDbMapping(path string) (string, int) {
 	var validation C.int = -1
 	cpath := C.CString(UrlToPath(path))
 	fmt.Printf("path=%s\n", path)
-	var matches C.int = C.VSSSearchNodes(cpath, VSSTreeRoot, 1500, (*C.struct_searchData_t)(unsafe.Pointer(&searchData)), anyDepth, true, (*C.int)(unsafe.Pointer(&validation)))
+	var matches C.int = C.VSSSearchNodes(cpath, VSSTreeRoot, 1500, (*C.struct_searchData_t)(unsafe.Pointer(&searchData)), anyDepth, true, 0, nil, 
+	                                     (*C.int)(unsafe.Pointer(&validation)))
 	C.free(unsafe.Pointer(cpath))
 	fmt.Printf("matches=%d\n", int(matches))
 	dbMap := "["
@@ -407,7 +408,7 @@ func getVssDbMapping(path string) (string, int) {
 		uuid := C.GoString(C.VSSgetUUID((C.long)(searchData[i].foundNodeHandle)))
 		var c_nodetype C.nodeTypes_t = C.VSSgetType((C.long)(searchData[i].foundNodeHandle))
 		nodeType := translateNodeType(int(c_nodetype))
-		var c_datatype C.nodeTypes_t = C.VSSgetDatatype((C.long)(searchData[i].foundNodeHandle))
+		var c_datatype C.nodeDatatypes_t = C.VSSgetDatatype((C.long)(searchData[i].foundNodeHandle))
 		dataType := translateDataType(int(c_datatype))
 		pathLen := getPathLen(string(searchData[i].responsePath[:]))
 		dbMap += `{"path":"` + string(searchData[i].responsePath[:pathLen]) + `", "uuid":"` + uuid + `", "nodetype":"` + nodeType + `", "datatype":"` + dataType + `"}, `
@@ -476,13 +477,13 @@ func OVDSGetValue(reqMap map[string]interface{}) (string, int) {
 			if (len(value) == 0) {
 			    return "", 5
 			}
-			response += `{ "path":"` + path + `", "datapoints":[{"value":"` + value + `", "timestamp":""}]}, `
+			response += `{ "path":"` + path + `", "dp":[{"value":"` + value + `", "ts":""}]}, `
 		} else {
 			datapoints := readTvValue(vinId, uuid, from, to, maxSamples)
 			if (len(datapoints) == 0) {
 			    return "", 5
 			}
-			response += `{"path":"` + path + `", "datapoints":` + datapoints + `}, `
+			response += `{"path":"` + path + `", "dp":` + datapoints + `}, `
 		}
 	}
 	response = response[:len(response)-2]
@@ -641,7 +642,7 @@ func createPathListFile(listFname string) {
 func main() {
 
         if (len(os.Args) != 3) {
-            fmt.Printf("./ovds_server db-file-name cnative-vss-tree-file-name\n")
+            fmt.Printf("./ovds_server db-file-name binary-vss-tree-file-name\n")
             os.Exit(1)
         }
 
