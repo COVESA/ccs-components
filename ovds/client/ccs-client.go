@@ -105,11 +105,13 @@ func getGen2Response(path string) string {
 	return string(body)
 }
 
-func writeToOVDS(data string) {
+func writeToOVDS(message string) {
 	url := "http://" + ovdsUrl + ":8765/ovdsserver"
-	fmt.Printf("writeToOVDS: data = %s\n", data)
+	fmt.Printf("writeToOVDS: message = %s\n", message)
 
-	payload := `{"action":"set", "vin":"` + thisVin + `", ` +  data[1:]
+	path, value, timeStamp := extractMessage(message)
+	payload := `{"action":"set", "vin":"` + thisVin + `", "path":"` +  path + `", "value":"` + value + `", "timestamp":"` + timeStamp + `"}`
+//	payload := `{"action":"set", "vin":"` + thisVin + `", ` +  data[1:]
 	fmt.Printf("writeToOVDS: request payload= %s \n", payload)
 
 	req, err := http.NewRequest("POST", url, strings.NewReader(payload))
@@ -176,12 +178,33 @@ func iterateNotificationAndWrite(conn *websocket.Conn) {
 	if (strings.Contains(message, "subscribe") == true) {
 	    fmt.Printf("Subscription response:%s\n", message)
 	} else {
-	    var msgMap = make(map[string]interface{})
-	    jsonToMap(message, &msgMap)
-	    data, _ := json.Marshal(msgMap["data"])
-	    writeToOVDS(`{"data":` + string(data) + "}")
+//	    var msgMap = make(map[string]interface{})
+//	    jsonToMap(message, &msgMap)
+//	    data, _ := json.Marshal(msgMap["data"])
+//	    writeToOVDS(`{"data":` + string(data) + "}")
+	    writeToOVDS(message)
 	}
     }
+}
+
+func extractMessage(message string) (string, string, string) { // message is expected to contain the key-value: “data”:{“path”:”B”, “dp”:{“value”:”C”, “ts”:”D”}}
+    var msgMap = make(map[string]interface{})
+    jsonToMap(message, &msgMap)
+    if (msgMap["data"] == nil) {
+	fmt.Printf("Error: Message does not contain vehicle data.\n")
+        return "", "", ""
+    }
+    data, _ := json.Marshal(msgMap["data"])
+
+    jsonToMap(string(data), &msgMap)
+    path := msgMap["path"].(string)
+    dp, _ := json.Marshal(msgMap["dp"])
+
+    jsonToMap(string(dp), &msgMap)
+    value := msgMap["value"].(string)
+    ts := msgMap["ts"].(string)
+fmt.Printf("path=%s, value=%s, ts=%s\n", path, value, ts)
+    return path, value, ts
 }
 
 func jsonToMap(request string, rMap *map[string]interface{}) {
