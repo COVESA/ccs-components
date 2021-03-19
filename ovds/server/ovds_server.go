@@ -493,7 +493,7 @@ func OVDSGetValue(reqMap map[string]interface{}) (string, int) {
 	return response, 0
 }
 
-func extractData(dataMap map[string]interface{}) (string, string, string) {
+/*func extractData(dataMap map[string]interface{}) (string, string, string) {
 //    var dataMap = make(map[string]interface{})
 //    jsonToMap(data, &dataMap)
     if dataMap["path"] == nil {
@@ -515,17 +515,29 @@ func extractDp(dpMap map[string]interface{}) (string, string) {
 	return value, ""
     }
     return value, dpMap["ts"].(string)
-}
+}*/
 
 func OVDSSetValue(reqMap map[string]interface{}) string {
 	if reqMap["vin"] == nil {
 		return "VIN missing"
 	}
 	vin := reqMap["vin"].(string)
-	if reqMap["data"] == nil {
+	if reqMap["path"] == nil {
+		return "Path missing"
+	}
+	path := reqMap["path"].(string)
+	if reqMap["value"] == nil {
+		return "Value missing"
+	}
+	value := reqMap["value"].(string)
+	timestamp := ""
+	if reqMap["timestamp"] != nil {
+	    timestamp = reqMap["timestamp"].(string)
+	}
+/*	if reqMap["data"] == nil {
 		return "Data missing"
 	}
-	path, value, timestamp := extractData(reqMap["data"].(map[string]interface{}))
+	path, value, timestamp := extractData(reqMap["data"].(map[string]interface{}))*/
 	if len(path) == 0 {
 		return "Data invalid"
 	}
