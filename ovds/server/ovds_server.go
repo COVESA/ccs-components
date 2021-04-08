@@ -15,7 +15,6 @@ import (
     "os"
     "strconv"
     "strings"
-    "sort"
     "unsafe"
 
     "database/sql"
@@ -52,7 +51,7 @@ func createStaticTables() int {
 	_, err = stmt1.Exec()
 	checkErr(err)
 
-        stmt2, err2 := db.Prepare(`CREATE TABLE "TIV" ( "vin_id" INTEGER NOT NULL, "uuid" TEXT NOT NULL, "value" TEXT, UNIQUE("vin_id", "uuid") ON CONFLICT IGNORE, FOREIGN KEY("vin_id") REFERENCES "VIN_TIV"("vin_id") )`)
+        stmt2, err2 := db.Prepare(`CREATE TABLE "TIV" ( "vin_id" INTEGER NOT NULL, "path" TEXT NOT NULL, "value" TEXT, UNIQUE("vin_id", "path") ON CONFLICT IGNORE, FOREIGN KEY("vin_id") REFERENCES "VIN_TIV"("vin_id") )`)
         checkErr(err2)
 
 	_, err2 = stmt2.Exec()
@@ -103,16 +102,16 @@ func writeVIN(vin string) int {
 	return 0
 }
 
-func writeTvValue(vinId int, uuid string, value string, timestamp string) int {
+func writeTvValue(vinId int, path string, value string, timestamp string) int {
 	tableName := "TV_" + strconv.Itoa(vinId)
-	sqlString := "INSERT INTO " + tableName + "(value, timestamp, uuid) values(?, ?, ?)"
+	sqlString := "INSERT INTO " + tableName + "(value, timestamp, path) values(?, ?, ?)"
 	stmt, err := db.Prepare(sqlString)
 	checkErr(err)
 	if err != nil {
 		return -1
 	}
 
-	_, err = stmt.Exec(value, timestamp, uuid)
+	_, err = stmt.Exec(value, timestamp, path)
 	checkErr(err)
 	if err != nil {
 		return -1
@@ -120,8 +119,8 @@ func writeTvValue(vinId int, uuid string, value string, timestamp string) int {
 	return 0
 }
 
-func writeTivValue(vinId int, uuid string, value string) int {
-        sqlString := "INSERT INTO TIV (vin_id, uuid) VALUES(?, ?)"
+func writeTivValue(vinId int, path string, value string) int {
+        sqlString := "INSERT INTO TIV (vin_id, path) VALUES(?, ?)"
         stmt, err := db.Prepare(sqlString)
         checkErr(err)
         if (err != nil) {
@@ -129,14 +128,14 @@ fmt.Printf("writeTivValue:prepare-INSERT OR IGNORE error\n")
             return -1
         }
 
-        _, err = stmt.Exec(vinId, uuid)
+        _, err = stmt.Exec(vinId, path)
         checkErr(err)
         if (err != nil) {
 fmt.Printf("writeTivValue:exec-INSERT OR IGNORE error\n")
             return -1
         }
 
-        sqlString = "UPDATE TIV SET `value`=? WHERE `vin_id`=? AND `uuid`=?"
+        sqlString = "UPDATE TIV SET `value`=? WHERE `vin_id`=? AND `path`=?"
         stmt, err = db.Prepare(sqlString)
         checkErr(err)
         if (err != nil) {
@@ -144,7 +143,7 @@ fmt.Printf("writeTivValue:prepare-UPDATE error\n")
             return -1
         }
 
-        _, err = stmt.Exec(value, vinId, uuid)
+        _, err = stmt.Exec(value, vinId, path)
         checkErr(err)
         if (err != nil) {
 fmt.Printf("writeTivValue:exec-UPDATE error\n")
@@ -172,8 +171,8 @@ func readVinId(vin string) int {
 	return vinId
 }
 
-func readTivValue(vinId int, uuid string) string {
-	rows, err := db.Query("SELECT `value` FROM TIV WHERE `vin_id`=? AND `uuid`=?", vinId, uuid)
+func readTivValue(vinId int, path string) string {
+	rows, err := db.Query("SELECT `value` FROM TIV WHERE `vin_id`=? AND `path`=?", vinId, path)
 	checkErr(err)
 	if err != nil {
 		return ""
@@ -190,9 +189,9 @@ func readTivValue(vinId int, uuid string) string {
 	return value
 }
 
-func readMax(tableName string, columnName string, uuid string) string {
-	sqlString := "SELECT MAX(" + columnName + ") FROM " + tableName + " WHERE `uuid`=? "
-	rows, err := db.Query(sqlString, uuid)
+func readMax(tableName string, columnName string, path string) string {
+	sqlString := "SELECT MAX(" + columnName + ") FROM " + tableName + " WHERE `path`=? "
+	rows, err := db.Query(sqlString, path)
 
 	var maxValue string
 	rows.Next()
@@ -205,21 +204,21 @@ func readMax(tableName string, columnName string, uuid string) string {
 	return maxValue
 }
 
-func readTvValue(vinId int, uuid string, from string, to string, maxSamples int) string {
+func readTvValue(vinId int, path string, from string, to string, maxSamples int) string {
 	var rows *sql.Rows
 	var err error
 	tableName := "TV_" + strconv.Itoa(vinId)
-	sqlStringCommon := "SELECT `value`, `timestamp` FROM " + tableName + " WHERE `uuid`=? AND "
+	sqlStringCommon := "SELECT `value`, `timestamp` FROM " + tableName + " WHERE `path`=? AND "
 	if len(from) != 0 && len(to) != 0 {
 		sqlString := sqlStringCommon + "`timestamp` > ? AND `timestamp` < ?"
-		rows, err = db.Query(sqlString, uuid, from, to)
+		rows, err = db.Query(sqlString, path, from, to)
 	} else if len(from) != 0 && len(to) == 0 {
 		sqlString := sqlStringCommon + "`timestamp` > ?"
-		rows, err = db.Query(sqlString, uuid, from)
+		rows, err = db.Query(sqlString, path, from)
 	} else if len(from) == 0 && len(to) == 0 {
-		maxTs := readMax(tableName, "timestamp", uuid)
+		maxTs := readMax(tableName, "timestamp", path)
 		sqlString := sqlStringCommon + "`timestamp` = ?"
-		rows, err = db.Query(sqlString, uuid, maxTs)
+		rows, err = db.Query(sqlString, path, maxTs)
 	} else {
 		return ""
 	}
@@ -259,7 +258,7 @@ func readTvValue(vinId int, uuid string, from string, to string, maxSamples int)
 
 func createTvVin(vinId int) {
 	tableName := "TV_" + strconv.Itoa(vinId)
-	sqlString := "CREATE TABLE " + tableName + " (`value` TEXT NOT NULL, `timestamp` TEXT NOT NULL, `uuid` TEXT, UNIQUE(`uuid`, `timestamp`) ON CONFLICT IGNORE)"
+	sqlString := "CREATE TABLE " + tableName + " (`value` TEXT NOT NULL, `timestamp` TEXT NOT NULL, `path` TEXT, UNIQUE(`path`, `timestamp`) ON CONFLICT IGNORE)"
 	stmt, err := db.Prepare(sqlString)
 	checkErr(err)
 
@@ -389,8 +388,7 @@ func getPathLen(path string) int {
 }
 
 func getVssDbMapping(path string) (string, int) {
-       // call int VSSSearchNodes(char* searchPath, long rootNode, int maxFound, searchData_t* searchData, bool anyDepth, bool leafNodesOnly, int listSize, noScopeList_t* noScopeList, 
-       //                         int* validation);
+// call int VSSSearchNodes(char* searchPath, long rootNode, int maxFound, searchData_t* searchData, bool anyDepth, bool leafNodesOnly, int listSize, noScopeList_t* noScopeList, int* validation);
 	searchData := [1500]searchData_t{} // cparserlib.h: #define MAXFOUNDNODES 1500
 	var anyDepth C.bool = false
 	if path[len(path)-1] == '*' {
@@ -405,13 +403,12 @@ func getVssDbMapping(path string) (string, int) {
 	fmt.Printf("matches=%d\n", int(matches))
 	dbMap := "["
 	for i := 0; i < int(matches); i++ {
-		uuid := C.GoString(C.VSSgetUUID((C.long)(searchData[i].foundNodeHandle)))
 		var c_nodetype C.nodeTypes_t = C.VSSgetType((C.long)(searchData[i].foundNodeHandle))
 		nodeType := translateNodeType(int(c_nodetype))
 		var c_datatype C.nodeDatatypes_t = C.VSSgetDatatype((C.long)(searchData[i].foundNodeHandle))
 		dataType := translateDataType(int(c_datatype))
 		pathLen := getPathLen(string(searchData[i].responsePath[:]))
-		dbMap += `{"path":"` + string(searchData[i].responsePath[:pathLen]) + `", "uuid":"` + uuid + `", "nodetype":"` + nodeType + `", "datatype":"` + dataType + `"}, `
+		dbMap += `{"path":"` + string(searchData[i].responsePath[:pathLen]) + `", "nodetype":"` + nodeType + `", "datatype":"` + dataType + `"}, `
 	}
 	if int(matches) > 0 {
 		dbMap = dbMap[:len(dbMap)-2]
@@ -448,7 +445,6 @@ func OVDSGetValue(reqMap map[string]interface{}) (string, int) {
 		elementStart += strings.Index(output[elementStart+1:len(output)], "{") + 1
 		jsonToMap(output[elementStart:elementStart+elementStop+1], &treeMap)
 		nodetype := treeMap["nodetype"].(string)
-		uuid := treeMap["uuid"].(string)
 		var from string
 		var maxSamples int
 		if reqMap["from"] == nil {
@@ -473,13 +469,13 @@ func OVDSGetValue(reqMap map[string]interface{}) (string, int) {
 			}
 		}
 		if nodetype == "ATTRIBUTE" {
-			value := readTivValue(vinId, uuid)
+			value := readTivValue(vinId, path)
 			if (len(value) == 0) {
 			    return "", 5
 			}
 			response += `{ "path":"` + path + `", "dp":[{"value":"` + value + `", "ts":""}]}, `
 		} else {
-			datapoints := readTvValue(vinId, uuid, from, to, maxSamples)
+			datapoints := readTvValue(vinId, path, from, to, maxSamples)
 			if (len(datapoints) == 0) {
 			    return "", 5
 			}
@@ -534,10 +530,6 @@ func OVDSSetValue(reqMap map[string]interface{}) string {
 	if reqMap["timestamp"] != nil {
 	    timestamp = reqMap["timestamp"].(string)
 	}
-/*	if reqMap["data"] == nil {
-		return "Data missing"
-	}
-	path, value, timestamp := extractData(reqMap["data"].(map[string]interface{}))*/
 	if len(path) == 0 {
 		return "Data invalid"
 	}
@@ -547,7 +539,6 @@ func OVDSSetValue(reqMap map[string]interface{}) string {
 	}
 	var dbMap = make(map[string]interface{})
 	jsonToMap(output[1:len(output)-1], &dbMap)
-	uuid := dbMap["uuid"].(string)
 	nodetype := dbMap["nodetype"].(string)
 	//fmt.Printf("nodetype=%s\n", nodetype)
 	if nodetype != "ATTRIBUTE" && len(timestamp) == 0 {
@@ -569,9 +560,9 @@ func OVDSSetValue(reqMap map[string]interface{}) string {
 	}
 	var err int
 	if nodetype == "ATTRIBUTE" {
-		err = writeTivValue(vinId, uuid, value)
+		err = writeTivValue(vinId, path, value)
 	} else {
-		err = writeTvValue(vinId, uuid, value, timestamp)
+		err = writeTvValue(vinId, path, value, timestamp)
 	}
 	if err != 0 {
 		return "Failed to store sample"
@@ -622,35 +613,6 @@ fmt.Printf("nextQuoteMark=%d\n\n", nextQuoteMark(resp[arrayFront:]))
     return resp
 }
 
-type PathList struct {
-	LeafPaths []string
-}
-var pathList PathList
-
-func sortPathList(listFname string) {
-	data, err := ioutil.ReadFile(listFname)
-	if err != nil {
-		fmt.Printf("Error reading %s: %s\n", listFname, err)
-		return
-	}
-	err = json.Unmarshal([]byte(data), &pathList)
-	if err != nil {
-		fmt.Printf("Error unmarshal json=%s\n", err)
-		return
-	}
-	sort.Strings(pathList.LeafPaths)
-	file, _ := json.Marshal(pathList)
-	_ = ioutil.WriteFile(listFname, file, 0644)
-}
-
-func createPathListFile(listFname string) {
-	// call int VSSGetLeafNodesList(long rootNode, char* leafNodeList);
-	clistFname := C.CString(listFname)
-	C.VSSGetLeafNodesList(VSSTreeRoot, clistFname)
-	C.free(unsafe.Pointer(clistFname))
-	sortPathList(listFname)
-}
-
 func main() {
 
         if (len(os.Args) != 3) {
@@ -666,8 +628,6 @@ func main() {
 		fmt.Println("VSS tree file not found")
 		os.Exit(1)
 	}
-
-	createPathListFile("../vsspathlist.json")  // save in ovds directory, where ovds client will expect it to be
 
         InitDb(os.Args[1])
         defer db.Close()
