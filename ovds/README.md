@@ -1,8 +1,7 @@
-The Open Vehicle Data Set (OVDS) server takes a database file name and the name of a file containing a VSS tree as command line input, as the examle shows below.
+The Open Vehicle Data Set (OVDS) server takes a database file name as command line input, as the examle shows below.
 
-$ ./ovds_server db-file-name vss-tree-filename
+$ ./ovds_server db-file-name
 
-The VSS tree must have the binary format. 
 If the database file does not exist, it creates an SQLite database with the provided name, and creates the tables:
 
 CREATE TABLE "VIN_TIV" ( "vin_id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, "vin" TEXT NOT NULL )<br>
@@ -25,7 +24,7 @@ For time variant signals, i. e. signals of node type SENSOR or ACTUATOR, the req
 
 Set requests to the same VIN and path are ignored if there already is an entry in the DB for the provided timestamp. 
 
-When a request contains a VIN that has not been entered into the database before, a new table for this VIN is created:
+When a set request contains a VIN that has not been entered into the database before, a new table for this VIN is created:
 
 CREATE TABLE TV_1 (`value` TEXT NOT NULL, `timestamp` TEXT NOT NULL, `path` TEXT)
 
