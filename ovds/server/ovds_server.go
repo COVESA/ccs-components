@@ -15,21 +15,11 @@ import (
     "os"
     "strconv"
     "strings"
-    "unsafe"
 
     "database/sql"
     "fmt"
     _ "github.com/mattn/go-sqlite3"
 )
-
-// #include <stdlib.h>
-// #include <stdint.h>
-// #include <stdio.h>
-// #include <stdbool.h>
-// #include "cparserlib.h"
-import "C"
-
-var VSSTreeRoot C.long
 
 type searchData_t struct { // searchData_t defined in vssparserutilities.h
 	responsePath    [512]byte // vssparserutilities.h: #define MAXCHARSPATH 512; typedef char path_t[MAXCHARSPATH];
@@ -325,14 +315,6 @@ func setErrorResponse(reqMap map[string]interface{}, errRespMap map[string]inter
 	errRespMap["error"] = `{"number":` + number + `,"reason":"` + reason + `","message":"` + message + `"}`
 }
 
-func initVssFile(filePath string) C.long {
-	cfilePath := C.CString(filePath)
-	root := C.VSSReadTree(cfilePath)
-	C.free(unsafe.Pointer(cfilePath))
-
-	return root
-}
-
 func translateNodeType(nodeType int) string {
 	switch nodeType {
 	case 1:
@@ -387,36 +369,6 @@ func getPathLen(path string) int {
 	return len(path)
 }
 
-func getVssDbMapping(path string) (string, int) {
-// call int VSSSearchNodes(char* searchPath, long rootNode, int maxFound, searchData_t* searchData, bool anyDepth, bool leafNodesOnly, int listSize, noScopeList_t* noScopeList, int* validation);
-	searchData := [1500]searchData_t{} // cparserlib.h: #define MAXFOUNDNODES 1500
-	var anyDepth C.bool = false
-	if path[len(path)-1] == '*' {
-		anyDepth = true
-	}
-	var validation C.int = -1
-	cpath := C.CString(UrlToPath(path))
-	fmt.Printf("path=%s\n", path)
-	var matches C.int = C.VSSSearchNodes(cpath, VSSTreeRoot, 1500, (*C.struct_searchData_t)(unsafe.Pointer(&searchData)), anyDepth, true, 0, nil, 
-	                                     (*C.int)(unsafe.Pointer(&validation)))
-	C.free(unsafe.Pointer(cpath))
-	fmt.Printf("matches=%d\n", int(matches))
-	dbMap := "["
-	for i := 0; i < int(matches); i++ {
-		var c_nodetype C.nodeTypes_t = C.VSSgetType((C.long)(searchData[i].foundNodeHandle))
-		nodeType := translateNodeType(int(c_nodetype))
-		var c_datatype C.nodeDatatypes_t = C.VSSgetDatatype((C.long)(searchData[i].foundNodeHandle))
-		dataType := translateDataType(int(c_datatype))
-		pathLen := getPathLen(string(searchData[i].responsePath[:]))
-		dbMap += `{"path":"` + string(searchData[i].responsePath[:pathLen]) + `", "nodetype":"` + nodeType + `", "datatype":"` + dataType + `"}, `
-	}
-	if int(matches) > 0 {
-		dbMap = dbMap[:len(dbMap)-2]
-	}
-	dbMap += "]"
-	return dbMap, int(matches)
-}
-
 func OVDSGetValue(reqMap map[string]interface{}) (string, int) {
 	if reqMap["vin"] == nil {
 		return "", 1
@@ -430,62 +382,41 @@ func OVDSGetValue(reqMap map[string]interface{}) (string, int) {
 		return "", 2
 	}
 	path := reqMap["path"].(string)
-	output, matches := getVssDbMapping(path)
-	if matches == 0 {
-		return "", 3
-	}
-	elementStart := 0
 	response := ""
-	if matches > 1 {
-		response = "["
+	var from string
+	var maxSamples int
+	if reqMap["from"] == nil {
+		from = ""
+	} else {
+		from = reqMap["from"].(string)
 	}
-	for i := 0; i < matches; i++ {
-		var treeMap = make(map[string]interface{})
-		elementStop := strings.Index(output[elementStart:len(output)], "}")
-		elementStart += strings.Index(output[elementStart+1:len(output)], "{") + 1
-		jsonToMap(output[elementStart:elementStart+elementStop+1], &treeMap)
-		nodetype := treeMap["nodetype"].(string)
-		var from string
-		var maxSamples int
-		if reqMap["from"] == nil {
-			from = ""
-		} else {
-			from = reqMap["from"].(string)
+	var to string
+	if reqMap["to"] == nil {
+		to = ""
+	} else {
+		to = reqMap["to"].(string)
+	}
+	if reqMap["maxsamples"] == nil {
+		maxSamples = 0
+	} else {
+	        var err error
+		maxSamples, err = strconv.Atoi(reqMap["maxsamples"].(string))
+		if (err != nil) {
+		    fmt.Printf("Maxsamples invalid, err=%s\n", err)
+		    maxSamples = 0
 		}
-		var to string
-		if reqMap["to"] == nil {
-			to = ""
-		} else {
-			to = reqMap["to"].(string)
-		}
-		if reqMap["maxsamples"] == nil {
-			maxSamples = 0
-		} else {
-		        var err error
-			maxSamples, err = strconv.Atoi(reqMap["maxsamples"].(string))
-			if (err != nil) {
-			    fmt.Printf("Maxsamples invalid, err=%s\n", err)
- 			    maxSamples = 0
-			}
-		}
-		if nodetype == "ATTRIBUTE" {
-			value := readTivValue(vinId, path)
-			if (len(value) == 0) {
-			    return "", 5
-			}
-			response += `{ "path":"` + path + `", "dp":[{"value":"` + value + `", "ts":""}]}, `
-		} else {
-			datapoints := readTvValue(vinId, path, from, to, maxSamples)
-			if (len(datapoints) == 0) {
-			    return "", 5
-			}
-			response += `{"path":"` + path + `", "dp":` + datapoints + `}, `
-		}
+	}
+	datapoints := readTvValue(vinId, path, from, to, maxSamples)
+	if (len(datapoints) == 0) {
+	    value := readTivValue(vinId, path)
+	    if (len(value) == 0) {
+	        return "", 5
+	    }
+	    response += `{ "path":"` + path + `", "dp":[{"value":"` + value + `", "ts":""}]}, `
+	} else {
+	    response += `{"path":"` + path + `", "dp":` + datapoints + `}, `
 	}
 	response = response[:len(response)-2]
-	if matches > 1 {
-		response += "]"
-	}
 	return response, 0
 }
 
@@ -526,26 +457,16 @@ func OVDSSetValue(reqMap map[string]interface{}) string {
 		return "Value missing"
 	}
 	value := reqMap["value"].(string)
+	timeInvariantNode := true
 	timestamp := ""
 	if reqMap["timestamp"] != nil {
+	    timeInvariantNode = false
 	    timestamp = reqMap["timestamp"].(string)
 	}
 	if len(path) == 0 {
 		return "Data invalid"
 	}
-	output, matches := getVssDbMapping(path)
-	if matches != 1 {
-		return "No matching path"
-	}
-	var dbMap = make(map[string]interface{})
-	jsonToMap(output[1:len(output)-1], &dbMap)
-	nodetype := dbMap["nodetype"].(string)
-	//fmt.Printf("nodetype=%s\n", nodetype)
-	if nodetype != "ATTRIBUTE" && len(timestamp) == 0 {
-		return "Timestamp missing"
-	}
 	vinId := readVinId(vin)
-	//fmt.Printf("First attempt to read vinId=%d\n", vinId)
 	if vinId == -1 {
 		err := writeVIN(vin)
 		if err != 0 {
@@ -559,7 +480,7 @@ func OVDSSetValue(reqMap map[string]interface{}) string {
 		createTvVin(vinId)
 	}
 	var err int
-	if nodetype == "ATTRIBUTE" {
+	if timeInvariantNode == true {
 		err = writeTivValue(vinId, path, value)
 	} else {
 		err = writeTvValue(vinId, path, value, timestamp)
@@ -615,19 +536,13 @@ fmt.Printf("nextQuoteMark=%d\n\n", nextQuoteMark(resp[arrayFront:]))
 
 func main() {
 
-        if (len(os.Args) != 3) {
-            fmt.Printf("./ovds_server db-file-name binary-vss-tree-file-name\n")
+        if (len(os.Args) != 2) {
+            fmt.Printf("The command to run the OVDS server must have input parameter as shown:\n./ovds_server db-file-name\n")
             os.Exit(1)
         }
 
 	serverChan := make(chan string)
 	muxServer := http.NewServeMux()
-
-	VSSTreeRoot = initVssFile(os.Args[2])
-	if VSSTreeRoot == 0 {
-		fmt.Println("VSS tree file not found")
-		os.Exit(1)
-	}
 
         InitDb(os.Args[1])
         defer db.Close()
