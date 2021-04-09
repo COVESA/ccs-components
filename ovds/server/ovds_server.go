@@ -227,7 +227,7 @@ func readTvValue(vinId int, path string, from string, to string, maxSamples int)
 		if err != nil {
 			return ""
 		}
-		datapoints += `{"value": "` + value + `", "ts": "` + timestamp + `"}, `
+		datapoints += `{"value":"` + value + `","ts":"` + timestamp + `"}, `
 		numOfDatapoints++
 		if (numOfDatapoints == maxSamples) {
 		    break
@@ -412,9 +412,9 @@ func OVDSGetValue(reqMap map[string]interface{}) (string, int) {
 	    if (len(value) == 0) {
 	        return "", 5
 	    }
-	    response += `{ "path":"` + path + `", "dp":[{"value":"` + value + `", "ts":""}]}, `
+	    response += `{"path":"` + path + `","dp":[{"value":"` + value + `","ts":""}]}, `
 	} else {
-	    response += `{"path":"` + path + `", "dp":` + datapoints + `}, `
+	    response += `{"path":"` + path + `","dp":` + datapoints + `}, `
 	}
 	response = response[:len(response)-2]
 	return response, 0
