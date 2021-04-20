@@ -32,12 +32,12 @@ var pathList PathList
 
 type DataPoint struct {
         Value string  `json:"value"`
-	Timestamp string  `json:"timestamp"`
+	Timestamp string  `json:"ts"`
 }
 
 type DataPackage struct {
         Path string  `json:"path"`
-	Datapoints []DataPoint `json:"datapoints"`
+	Datapoints []DataPoint `json:"dp"`
 }
 
 type SampleList struct {
@@ -125,7 +125,7 @@ func createPathList(fname string) int {
 func initTimeStamps(numOfPaths int) {
     latestTimestamp = make([]string, numOfPaths)
     for i := 0 ; i < numOfPaths ; i++ {
-        latestTimestamp[i] = "2020-01-01T00:00:00Z"
+        latestTimestamp[i] = "2000-01-01T00:00:00Z"
     }
 }
 
@@ -187,7 +187,8 @@ fmt.Printf("fillRings: i=%d, numOfFreeElements=%d\n", i, numOfFreeElements)
 }
 
 func convertFromIsoTime(isoTime string) (time.Time, error) {
-	time, err := time.Parse(time.RFC3339, isoTime)
+        correctIsoTime := strings.ReplaceAll(isoTime, ".", ":")  // Adapter uses YYYY-MM-DDThh.mm.ssZ
+	time, err := time.Parse(time.RFC3339, correctIsoTime)
 	return time, err
 }
 
@@ -203,11 +204,14 @@ func getOldestTimestamp(ringArray []RingBuffer, numOfPaths int) time.Time {
         if (len(timestamp) == 0) {
             continue
         }
+fmt.Printf("getOldestTimestamp: readRing(%d)=%s\n", i, timestamp)
         ts, err := convertFromIsoTime(timestamp)
         if (err == nil) {
             if (ts.Before(oldestTime)) {
                 oldestTime = ts
             }
+        } else {
+            fmt.Printf("convertFromIsoTime: error for timestamp=%s\n", timestamp)
         }
     }
 fmt.Printf("getOldestTimestamp: oldest-ts=%s\n", oldestTime)
