@@ -2,6 +2,10 @@ The Open Vehicle Data Set (OVDS) server takes a database file name as command li
 
 $ ./ovds_server db-file-name
 
+There is one exemption, and that is when it is used together with the livesim vehicle data simulator, it should then be started as below instead.
+$ ./ovds_server db-file-name livesim
+
+
 If the database file does not exist, it creates an SQLite database with the provided name, and creates the tables:
 
 CREATE TABLE "VIN_TIV" ( "vin_id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, "vin" TEXT NOT NULL )<br>

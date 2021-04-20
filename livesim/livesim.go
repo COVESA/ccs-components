@@ -130,7 +130,7 @@ func initTimeStamps(numOfPaths int) {
 }
 
 func getOvdsSamples(path string, timestamp string, numOfSamples int) string {
-	url := "http://" + ovdsUrl + ":8765/ovdsserver"
+	url := "http://" + ovdsUrl + ":8766/ovdsserver"
         data := `{"action":"get", "vin": "` + vehicleVin + `", "path":"` + path + `", "from":"` + timestamp + `", "maxsamples":"` + strconv.Itoa(numOfSamples) + `"}`
 	req, err := http.NewRequest("POST", url, strings.NewReader(data))
 	if err != nil {
@@ -141,7 +141,7 @@ func getOvdsSamples(path string, timestamp string, numOfSamples int) string {
 	// Set headers
 	req.Header.Set("Access-Control-Allow-Origin", "*")
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Host", ovdsUrl+":8765")
+	req.Header.Set("Host", ovdsUrl+":8766")
 
 	// Set client timeout
 	client := &http.Client{Timeout: time.Second * 10}
@@ -278,6 +278,7 @@ func main() {
         fmt.Printf("livesim command line: ./livesim VIN OVDS-server-url statestorage-db-filename\n")
 	os.Exit(1)
     }
+    fmt.Printf("Remember to start the OVDS server to run with livesim.\n")
     vehicleVin = os.Args[1]
     ovdsUrl = os.Args[2]
     statestorageFname = os.Args[3]

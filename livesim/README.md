@@ -9,6 +9,9 @@ where
 - url-to-ovds-server is the IP address of the OVDS server
 - ../statestorage/statestorage.db is the path to the statestorage database.
 
-The service manager component of the Gen server retrieves data from the statestorage database that it finds in its deployment directory. 
-This enables a Gen2 client to read simulated "live" data coming from recorded data in an OVDS database.
+The VISSv2 server retrieves data from a database file named statestorage.db if it finds it in its deployment directory.<br>
+https://github.com/MEAE-GOT/W3C_VehicleSignalInterfaceImpl<br>
+
+So if livesim writes to this database, a VISSv2 client can access simulated "live" data coming from recorded data in the OVDS database that livesim reads from.
+The OVDS server that livesim reads from must be started with the extra command parameter "livesim" to listen to listen for its requests.
 
