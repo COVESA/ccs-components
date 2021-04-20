@@ -26,6 +26,8 @@ type searchData_t struct { // searchData_t defined in vssparserutilities.h
 	foundNodeHandle int64     // defined as long in vssparserutilities.h
 }
 
+var ovdsPort string
+
 var db *sql.DB
 var dbErr error
 
@@ -285,10 +287,12 @@ func makeOVDSServerHandler(serverChannel chan string) func(http.ResponseWriter, 
 }
 
 func initOVDSServer(serverChannel chan string, muxServer *http.ServeMux) {
-	fmt.Printf("initOVDSServer(): :8765/ovdsserver")
+//	fmt.Printf("initOVDSServer(): :8765/ovdsserver")
+	fmt.Printf("initOVDSServer(): :" + ovdsPort + "/ovdsserver")
 	agtServerHandler := makeOVDSServerHandler(serverChannel)
 	muxServer.HandleFunc("/ovdsserver", agtServerHandler)
-	fmt.Println(http.ListenAndServe(":8765", muxServer))
+//	fmt.Println(http.ListenAndServe(":8765", muxServer))
+	fmt.Println(http.ListenAndServe(":" + ovdsPort, muxServer))
 }
 
 func jsonToMap(request string, rMap *map[string]interface{}) {
@@ -536,9 +540,19 @@ fmt.Printf("nextQuoteMark=%d\n\n", nextQuoteMark(resp[arrayFront:]))
 
 func main() {
 
-        if (len(os.Args) != 2) {
-            fmt.Printf("The command to run the OVDS server must have input parameter as shown:\n./ovds_server db-file-name\n")
+        if (len(os.Args) < 2 || len(os.Args) > 3) {
+            fmt.Printf("The command to run the OVDS server must have input parameter as shown:\n./ovds_server db-file-name\nor\n./ovds_server db-file-name livesim\n")
             os.Exit(1)
+        }
+        ovdsPort = "8765"
+        if (len(os.Args) == 3) {
+            if (os.Args[2] == "livesim") {
+                ovdsPort = "8766"  // OVDS to be used together with livesim
+	        fmt.Printf("OVDS server to be used with the livesim vehicle data simulator.\n")
+            } else {
+                fmt.Printf("The command to run the OVDS server together with livesim must have input parameter as shown:\n./ovds_server db-file-name livesim\n")
+                os.Exit(1)
+            }
         }
 
 	serverChan := make(chan string)
