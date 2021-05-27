@@ -23,6 +23,8 @@ import (
 )
 
 var db *sql.DB
+var stateStorageError bool = false
+
 
 type PathList struct {
 	LeafPaths []string
@@ -242,17 +244,19 @@ func InitDb(dbFile string) *sql.DB {
 
 func writeToStatestorage(path string, value string, timestamp string) {
 	stmt, err := db.Prepare("UPDATE VSS_MAP SET value=?, timestamp=? WHERE `path`=?")
-	if err != nil {
+	if (err != nil) {
 		fmt.Printf("Db prepare update failed, err=%s", err)
+		stateStorageError = true
 		return
 	}
 
 	_, err = stmt.Exec(value, timestamp, path)
 	if err != nil {
 		fmt.Printf("Db exec update failed, err=%s", err)
+		stateStorageError = true
 		return
 	}
-fmt.Printf("writeToStatestorage:  value=%s, ts=%s, path=%s\n", value, timestamp, path)
+        fmt.Printf("writeToStatestorage:  value=%s, ts=%s, path=%s\n", value, timestamp, path)
 }
 
 func pushRingSamples(ringArray []RingBuffer, numOfPaths int, currentTime time.Time) int {
@@ -290,14 +294,21 @@ func main() {
     timeDiff := getOldestTimestamp(ringArray, numOfPaths).Sub(getCurrentUtcTime())
     for {
         currentTime := getCurrentUtcTime().Add(timeDiff)
-fmt.Printf("currentTime: %s\n", currentTime)
         minFill := pushRingSamples(ringArray, numOfPaths, currentTime)
         if (minFill == 0) { // could also be done if sleep time > x
             fillRings(ringArray, numOfPaths)
         }
         currentTime = getCurrentUtcTime().Add(timeDiff)
         wakeUp := getOldestTimestamp(ringArray, numOfPaths).Sub(currentTime)
-fmt.Printf("Sleep for: %s\n", wakeUp)
+        fmt.Printf("Sleep for: %s\n", wakeUp)
+        if (wakeUp < 0) {
+            if (stateStorageError == false) {
+                fmt.Printf("Live simulator: Done reading the OVDS database.\nGoodbye.\n")
+            } else {
+                fmt.Printf("Live simulator: Error writing to the %s database.\nGoodbye.\n", statestorageFname)
+            }
+            break
+        }
         time.Sleep(wakeUp)
     }
 }
