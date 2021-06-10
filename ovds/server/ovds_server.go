@@ -38,16 +38,16 @@ var errorResponseMap = map[string]interface{}{
 
 func createStaticTables() int {
 	stmt1, err := db.Prepare(`CREATE TABLE "VIN_TIV" ( "vin_id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, "vin" TEXT NOT NULL )`)
-	checkErr(err)
+	checkErr(err,1)
 
 	_, err = stmt1.Exec()
-	checkErr(err)
+	checkErr(err,2)
 
         stmt2, err2 := db.Prepare(`CREATE TABLE "TIV" ( "vin_id" INTEGER NOT NULL, "path" TEXT NOT NULL, "value" TEXT, UNIQUE("vin_id", "path") ON CONFLICT IGNORE, FOREIGN KEY("vin_id") REFERENCES "VIN_TIV"("vin_id") )`)
-        checkErr(err2)
+        checkErr(err2,3)
 
 	_, err2 = stmt2.Exec()
-	checkErr(err2)
+	checkErr(err2,4)
 
 	if err != nil || err2 != nil {
 		return -1
@@ -69,7 +69,7 @@ func InitDb(dbFile string) {
 	    doCreate = false
 	}
 	db, dbErr = sql.Open("sqlite3", dbFile)
-	checkErr(dbErr)
+	checkErr(dbErr,5)
 	if (doCreate) {
 		err := createStaticTables()
 		if err != 0 {
@@ -81,13 +81,13 @@ func InitDb(dbFile string) {
 
 func writeVIN(vin string) int {
 	stmt, err := db.Prepare("INSERT INTO VIN_TIV(vin) values(?)")
-	checkErr(err)
+	checkErr(err,6)
 	if err != nil {
 		return -1
 	}
 
 	_, err = stmt.Exec(vin)
-	checkErr(err)
+	checkErr(err,7)
 	if err != nil {
 		return -1
 	}
@@ -98,13 +98,13 @@ func writeTvValue(vinId int, path string, value string, timestamp string) int {
 	tableName := "TV_" + strconv.Itoa(vinId)
 	sqlString := "INSERT INTO " + tableName + "(value, timestamp, path) values(?, ?, ?)"
 	stmt, err := db.Prepare(sqlString)
-	checkErr(err)
+	checkErr(err,8)
 	if err != nil {
 		return -1
 	}
 
 	_, err = stmt.Exec(value, timestamp, path)
-	checkErr(err)
+	checkErr(err,9)
 	if err != nil {
 		return -1
 	}
@@ -114,14 +114,14 @@ func writeTvValue(vinId int, path string, value string, timestamp string) int {
 func writeTivValue(vinId int, path string, value string) int {
         sqlString := "INSERT INTO TIV (vin_id, path) VALUES(?, ?)"
         stmt, err := db.Prepare(sqlString)
-        checkErr(err)
+        checkErr(err,10)
         if (err != nil) {
 fmt.Printf("writeTivValue:prepare-INSERT OR IGNORE error\n")
             return -1
         }
 
         _, err = stmt.Exec(vinId, path)
-        checkErr(err)
+        checkErr(err,11)
         if (err != nil) {
 fmt.Printf("writeTivValue:exec-INSERT OR IGNORE error\n")
             return -1
@@ -129,14 +129,14 @@ fmt.Printf("writeTivValue:exec-INSERT OR IGNORE error\n")
 
         sqlString = "UPDATE TIV SET `value`=? WHERE `vin_id`=? AND `path`=?"
         stmt, err = db.Prepare(sqlString)
-        checkErr(err)
+        checkErr(err,12)
         if (err != nil) {
 fmt.Printf("writeTivValue:prepare-UPDATE error\n")
             return -1
         }
 
         _, err = stmt.Exec(value, vinId, path)
-        checkErr(err)
+        checkErr(err,13)
         if (err != nil) {
 fmt.Printf("writeTivValue:exec-UPDATE error\n")
             return -1
@@ -147,74 +147,82 @@ fmt.Printf("writeTivValue:exec-UPDATE error\n")
 
 func readVinId(vin string) int {
 	rows, err := db.Query("SELECT `vin_id` FROM VIN_TIV WHERE `vin`=?", vin)
-	checkErr(err)
+	checkErr(err,14)
 	if err != nil {
 		return -1
 	}
+	defer rows.Close()
 	var vinId int
 
 	rows.Next()
 	err = rows.Scan(&vinId)
-	checkErr(err)
+	checkErr(err,15)
 	if err != nil {
 		return -1
 	}
-	rows.Close()
 	return vinId
 }
 
 func readTivValue(vinId int, path string) string {
 	rows, err := db.Query("SELECT `value` FROM TIV WHERE `vin_id`=? AND `path`=?", vinId, path)
-	checkErr(err)
+	checkErr(err,16)
 	if err != nil {
 		return ""
 	}
+	defer rows.Close()
 	var value string
 
 	rows.Next()
 	err = rows.Scan(&value)
-	checkErr(err)
+	checkErr(err,17)
 	if err != nil {
 		return ""
 	}
-	rows.Close()
 	return value
 }
 
 func readMax(tableName string, columnName string, path string) string {
 	sqlString := "SELECT MAX(" + columnName + ") FROM " + tableName + " WHERE `path`=? "
 	rows, err := db.Query(sqlString, path)
+	defer rows.Close()
 
 	var maxValue string
 	rows.Next()
 	err = rows.Scan(&maxValue)
-	checkErr(err)
+	checkErr(err,18)
 	if err != nil {
 		return ""
 	}
-	rows.Close()
 	return maxValue
 }
 
-func readTvValue(vinId int, path string, from string, to string, maxSamples int) string {
+func readTvValue(vinId int, path string, from string, to string, maxSamples string) string {
+fmt.Printf("readTvValue:vinId=%d, path=%s, from=%s, to=%s, maxSamples=%s\n", vinId, path, from, to, maxSamples)
 	var rows *sql.Rows
 	var err error
 	tableName := "TV_" + strconv.Itoa(vinId)
 	sqlStringCommon := "SELECT `value`, `timestamp` FROM " + tableName + " WHERE `path`=? AND "
 	if len(from) != 0 && len(to) != 0 {
-		sqlString := sqlStringCommon + "`timestamp` > ? AND `timestamp` < ?"
-		rows, err = db.Query(sqlString, path, from, to)
+ 		    sqlString := sqlStringCommon + "`timestamp` > ? AND `timestamp` < ?"
+		    rows, err = db.Query(sqlString, path, from, to)
 	} else if len(from) != 0 && len(to) == 0 {
-		sqlString := sqlStringCommon + "`timestamp` > ?"
-		rows, err = db.Query(sqlString, path, from)
+	        if (len(maxSamples) == 0) {
+		    sqlString := sqlStringCommon + "`timestamp` > ?"
+		    rows, err = db.Query(sqlString, path, from)
+		} else {
+		    sqlString := sqlStringCommon + "`timestamp` > ?  LIMIT ?"
+		    rows, err = db.Query(sqlString, path, from, maxSamples)
+		}
 	} else if len(from) == 0 && len(to) == 0 {
 		maxTs := readMax(tableName, "timestamp", path)
 		sqlString := sqlStringCommon + "`timestamp` = ?"
 		rows, err = db.Query(sqlString, path, maxTs)
 	} else {
+		fmt.Printf("readTvValue: DB not read.\n")
 		return ""
 	}
-	checkErr(err)
+	defer rows.Close()
+	checkErr(err,19)
 	if err != nil {
 		return ""
 	}
@@ -225,18 +233,15 @@ func readTvValue(vinId int, path string, from string, to string, maxSamples int)
 
 	for rows.Next() {
 		err = rows.Scan(&value, &timestamp)
-		checkErr(err)
+		checkErr(err,20)
 		if err != nil {
 			return ""
 		}
 		datapoints += `{"value":"` + value + `","ts":"` + timestamp + `"}, `
 		numOfDatapoints++
-		if (numOfDatapoints == maxSamples) {
-		    break
-		}
 	}
-	rows.Close()
 	if (numOfDatapoints == 0) {
+ 	    fmt.Printf("readTvValue: Data not found.\n")
 	    return ""
 	}
 	datapoints = datapoints[:len(datapoints)-2]
@@ -252,15 +257,15 @@ func createTvVin(vinId int) {
 	tableName := "TV_" + strconv.Itoa(vinId)
 	sqlString := "CREATE TABLE " + tableName + " (`value` TEXT NOT NULL, `timestamp` TEXT NOT NULL, `path` TEXT, UNIQUE(`path`, `timestamp`) ON CONFLICT IGNORE)"
 	stmt, err := db.Prepare(sqlString)
-	checkErr(err)
+	checkErr(err,21)
 
 	_, err = stmt.Exec()
-	checkErr(err)
+	checkErr(err,22)
 }
 
 func makeOVDSServerHandler(serverChannel chan string) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
-		fmt.Printf("OVDSServer:url=%s", req.URL.Path)
+//		fmt.Printf("OVDSServer:url=%s\n", req.URL.Path)
 		if req.URL.Path != "/ovdsserver" {
 			http.Error(w, "404 url path not found.", 404)
 		} else if req.Method != "POST" {
@@ -388,7 +393,7 @@ func OVDSGetValue(reqMap map[string]interface{}) (string, int) {
 	path := reqMap["path"].(string)
 	response := ""
 	var from string
-	var maxSamples int
+	var maxSamples string
 	if reqMap["from"] == nil {
 		from = ""
 	} else {
@@ -401,14 +406,15 @@ func OVDSGetValue(reqMap map[string]interface{}) (string, int) {
 		to = reqMap["to"].(string)
 	}
 	if reqMap["maxsamples"] == nil {
-		maxSamples = 0
+		maxSamples = ""
 	} else {
-	        var err error
+	    maxSamples = reqMap["maxsamples"].(string)
+/*	        var err error
 		maxSamples, err = strconv.Atoi(reqMap["maxsamples"].(string))
 		if (err != nil) {
 		    fmt.Printf("Maxsamples invalid, err=%s\n", err)
 		    maxSamples = 0
-		}
+		}*/
 	}
 	datapoints := readTvValue(vinId, path, from, to, maxSamples)
 	if (len(datapoints) == 0) {
@@ -566,7 +572,7 @@ func main() {
 	for {
 		select {
 		case request := <-serverChan:
-			fmt.Printf("main loop:request received")
+			fmt.Printf("main loop:request received\n")
 			var requestMap = make(map[string]interface{})
 			var responseMap = make(map[string]interface{})
 			var err int
@@ -609,9 +615,8 @@ func main() {
 	}
 }
 
-func checkErr(err error) {
+func checkErr(err error, id int) {
 	if err != nil {
-		fmt.Println(err)
-		//            panic(err)
+		fmt.Printf("checkErr: err=%s, id=%d\n", err, id)
 	}
 }
