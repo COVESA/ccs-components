@@ -175,7 +175,10 @@ func fillRings(ringArray []RingBuffer, numOfPaths int) {
     for i := 0 ; i < numOfPaths ; i++ {
         numOfFreeElements := RINGSIZE - getNumOfUnreadRingElements(i)
         response := getOvdsSamples(pathList.LeafPaths[i], latestTimestamp[i], numOfFreeElements)
-        if (len(response) == 0 || strings.Contains(response, "error") == true) {
+        if (len(response) == 0) {
+            break
+        }
+        if (strings.Contains(response, "error") == true) {
             continue
         }
         jsonToStructList(response, &sampleList)
