@@ -472,6 +472,7 @@ func OVDSSetValue(reqMap map[string]interface{}) string {
 	if reqMap["timestamp"] != nil {
 	    timeInvariantNode = false
 	    timestamp = reqMap["timestamp"].(string)
+	    timestamp = strings.Replace(timestamp, ".", ":", -1)  // Adapter  has incorrect format yyyy-mm-ddThh.mm.ssZ
 	}
 	if len(path) == 0 {
 		return "Data invalid"
