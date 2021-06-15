@@ -1,6 +1,9 @@
-The Open Vehicle Data Set (OVDS) server takes a database file name as command line input, as the examle shows below.
+To build the Open Vehicle Data Set (OVDS) server:
+$ go build
 
-$ ./ovds_server db-file-name
+The OVDS server then takes a database file name as command line input, as the example shows below.
+
+$ ./server db-file-name
 
 There is one exemption, and that is when it is used together with the livesim vehicle data simulator, it should then be started as below instead.
 $ ./ovds_server db-file-name livesim

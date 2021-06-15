@@ -357,9 +357,11 @@ func main() {
             os.Exit(0)
         } else {
             fmt.Printf("Vehicle state storage manager command line must either be started:\n" +
-             "- with a file name to a database, and a file name to a file containing VSS-paths, \n" +
+             "- with a file name to a database, and a file name to a file containing VSS-paths, see example: \n" +
+             "$ ./statestorage statestorage.db vsspathlist.json\n" +
              "when a new database with VSS mapping is to be created.\n" +
-             "- with a file name to a database only, when proprietary mapping is to be done.\n")
+             "- with a file name to a database only, when proprietary mapping is to be done, see example:\n" +
+             "$ ./statestorage statestorage.db\n")
             os.Exit(1)
         }
 }

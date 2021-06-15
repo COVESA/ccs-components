@@ -1,7 +1,8 @@
 # Live simulator
 The live simulator reads the OVDS database that the OVDS server manages, and writes the data into the statestorage database in a temporal pace set by the timestamps of the data. 
-The live simulator is started from the command line as follows:
+The live simulator is built and started from the command lines as follows:
 
+$ go build
 $ ./livesim ULF url-to-ovds-server ../statestorage/statestorage.db 
 
 where 

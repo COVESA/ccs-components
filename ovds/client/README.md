@@ -1,6 +1,9 @@
-The CCS client is started as shown in the command line example below
+To build the CCS client
+$ go build
 
-$ ./ccs_client gen2-server-url ovds-server-url vin iteration-period access-mode<br>
+The CCS client is then started as shown in the command line example below
+
+$ ./client gen2-server-url ovds-server-url vin iteration-period access-mode<br>
 An example could look like:<br>
 $ ./client gen2_server.w3.org 192.168.8.108 GEO001 30 subscribe
 
