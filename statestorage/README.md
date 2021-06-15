@@ -1,3 +1,11 @@
+To build the state storage manager
+$ go build
+
+Command line examples to run the statestorage manager
+$ ./statestorage statestorage.db vsspathlist.json  // to create the statestorage DB
+or
+$ ./statestorage statestorage.db  // to enter mapping data from another address space to VSS
+
 The vehicle state storage is used in the Genivi CCS project as a buffer between the Data server and the Feeder, the latter retrieving the data from the underlying "native" vehicle signal subsystem.<br><br>
 The state storage manager provides the following services in this context:<br>
 1. The creation of the SQL database that realizes this buffer.<br>
