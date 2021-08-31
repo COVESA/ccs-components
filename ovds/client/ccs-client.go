@@ -13,6 +13,8 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"crypto/tls"
+	"crypto/x509"
 	"flag"
 	"os"
 	"strconv"
@@ -24,6 +26,8 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+var clientCert tls.Certificate
+var caCertPool x509.CertPool
 var vissv2Url string
 var ovdsUrl string
 var thisVin string
@@ -72,7 +76,14 @@ func saveListAsFile(fname string) {
 }
 
 func getGen2Response(path string) string {
-	url := "http://" + vissv2Url + ":8888" + pathToUrl(path)
+	secPort := "8888"
+	scheme := "http"
+	if (secConfig.TransportSec == "yes") {
+	    scheme = "https"
+	    secPortNum, _ := strconv.Atoi(secConfig.SecPort)
+	    secPort = strconv.Itoa(secPortNum + 1)   // to diff from WSS portno
+	}
+	url := scheme + "://" + vissv2Url + ":" + secPort + pathToUrl(path)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -83,10 +94,22 @@ func getGen2Response(path string) string {
 	// Set headers
 	req.Header.Set("Access-Control-Allow-Origin", "*")
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Host", vissv2Url+":8888")
+	req.Header.Set("Host", vissv2Url + ":" + secPort)
 
-	// Set client timeout
-	client := &http.Client{Timeout: time.Second * 10}
+	// Configure client
+	var client *http.Client
+	if (secConfig.TransportSec == "yes") {
+	    t := &http.Transport {
+		TLSClientConfig: &tls.Config{
+		Certificates:    []tls.Certificate{clientCert},
+		RootCAs:         &caCertPool,
+	        },
+	    }
+
+	    client = &http.Client{Transport: t, Timeout: 10 * time.Second}	
+	} else {
+	    client = &http.Client{Timeout: 10 * time.Second}
+	}
 
 	// Send request
 	resp, err := client.Do(req)
@@ -157,8 +180,18 @@ func iterateGetAndWrite(elements int, sleepTime int) {
 }
 
 func initVissV2WebSocket() *websocket.Conn {
-	var addr = flag.String("addr", vissv2Url + ":8080", "http service address")
-	dataSessionUrl := url.URL{Scheme: "ws", Host: *addr, Path: ""}
+	scheme := "ws"
+	portNum := "8080"
+	if (secConfig.TransportSec == "yes") {
+	    scheme = "wss"
+	    portNum = secConfig.SecPort
+	    websocket.DefaultDialer.TLSClientConfig = &tls.Config{
+		Certificates:    []tls.Certificate{clientCert},
+		RootCAs:         &caCertPool,
+	        }
+	}
+	var addr = flag.String("addr", vissv2Url + ":" + portNum, "http service address")
+	dataSessionUrl := url.URL{Scheme: scheme, Host: *addr, Path: ""}
 	conn, _, err := websocket.DefaultDialer.Dial(dataSessionUrl.String(), nil)
 	if err != nil {
 		fmt.Printf("Data session dial error:%s\n", err)
@@ -261,6 +294,12 @@ func main() {
 	if (accessMode != "get" && accessMode != "subscribe") {
 		fmt.Printf("CCS client access-mode must be either get or subscribe.\n")
 		os.Exit(1)
+	}
+
+	readTransportSecConfig()
+        fmt.Printf("InitClientServer():secConfig.TransportSec=%s", secConfig.TransportSec)
+	if (secConfig.TransportSec == "yes") {
+	    caCertPool = *prepareTransportSecConfig()
 	}
 
 	if createListFromFile("vsspathlist.json") == 0 {
