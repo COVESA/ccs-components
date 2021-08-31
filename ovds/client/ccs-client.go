@@ -185,6 +185,10 @@ func initVissV2WebSocket() *websocket.Conn {
 	if (secConfig.TransportSec == "yes") {
 	    scheme = "wss"
 	    portNum = secConfig.SecPort
+	    websocket.DefaultDialer.TLSClientConfig = &tls.Config{
+		Certificates:    []tls.Certificate{clientCert},
+		RootCAs:         &caCertPool,
+	        }
 	}
 	var addr = flag.String("addr", vissv2Url + ":" + portNum, "http service address")
 	dataSessionUrl := url.URL{Scheme: scheme, Host: *addr, Path: ""}
