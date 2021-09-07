@@ -297,37 +297,20 @@ func main() {
 		Help:     "CCS client access-mode must be either get or subscribe.",
 		Default:  "get"})
 
-	//	accessMode := parser.String("a", "accessMode", &argparse.Options{Required: true, Help: "CCS client access-mode must be either get or subscribe."})
-
 	// Parse input
 	err := parser.Parse(os.Args)
 	if err != nil {
-		// In case of error print error and print usage
-		// This can also be done by passing -h or --help flags
 		fmt.Print(parser.Usage(err))
+		//exits due to required info not provided by user
+		os.Exit(1)
 	}
 
-	//conversion since consts are defined as string type and not *string
+	//conversion since parsed flags are of *string type and not string
 	vissv2Url = *url_viss
 	ovdsUrl = *url_ovds
 	thisVin = *vin
 	iterationPeriod := *iter
 	accessMode := *accMode
-
-	/**if len(os.Args) != 6 {
-		fmt.Printf("CCS client command line: ./client gen2-server-url OVDS-server-url vin list-iteration-time access-mode\n")
-		os.Exit(1)
-	}
-	vissv2Url = os.Args[1]
-	ovdsUrl = os.Args[2]
-	thisVin = os.Args[3]
-	iterationPeriod, _ := strconv.Atoi(os.Args[4])
-	accessMode := os.Args[5]
-	if (accessMode != "get" && accessMode != "subscribe") {
-		fmt.Printf("CCS client access-mode must be either get or subscribe.\n")
-		os.Exit(1)
-	}
-	*/
 
 	readTransportSecConfig()
 	fmt.Printf("InitClientServer():secConfig.TransportSec=%s", secConfig.TransportSec)
