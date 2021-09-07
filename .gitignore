@@ -11,3 +11,6 @@ statestorage/statestorage
 *.srl
 *.key
 *.csr
+
+
+***.vscode/
