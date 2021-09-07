@@ -5,3 +5,9 @@ ovds/client/client
 *.db
 node-modules
 statestorage/statestorage
+
+# ignore all cert files
+*.crt
+*.srl
+*.key
+*.csr
