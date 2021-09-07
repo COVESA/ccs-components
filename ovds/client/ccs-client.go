@@ -163,8 +163,8 @@ func writeToOVDS(message string) {
 
 		/*	body, err := ioutil.ReadAll(resp.Body)   // TODO Handle error response
 			if err != nil {
-				fmt.Printf("writeToOVDS: Error in reading response= %s ", err)
-				return
+			  fmt.Printf("writeToOVDS: Error in reading response= %s ", err)
+			  return
 			}*/
 	}
 }
@@ -211,7 +211,7 @@ func iterateNotificationAndWrite(conn *websocket.Conn) {
 			return
 		}
 		message := string(msg)
-		if strings.Contains(message, "subscribe") == true {
+		if strings.Contains(message, "subscribe") {
 			fmt.Printf("Subscription response:%s\n", message)
 		} else {
 			//	    var msgMap = make(map[string]interface{})
