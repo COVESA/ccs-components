@@ -466,7 +466,7 @@ func OVDSSetValue(reqMap map[string]interface{}) string {
 	if reqMap["value"] == nil {
 		return "Value missing"
 	}
-	value := reqMap["value"].(string)
+	value := fixSyntax(reqMap["value"].(string))
 	timeInvariantNode := true
 	timestamp := ""
 	if reqMap["timestamp"] != nil {
@@ -500,6 +500,13 @@ func OVDSSetValue(reqMap map[string]interface{}) string {
 		return "Failed to store sample"
 	}
 	return "200 OK"
+}
+
+func fixSyntax(value string) string {
+	value = strings.Replace(value, ",", ".", 1)
+	value = strings.Replace(value, "False", "false", 1)
+	value = strings.Replace(value, "True", "true", 1)
+	return value
 }
 
 func cleanupResponse(resp string) string {
