@@ -14,24 +14,6 @@ If the database file does not exist, it creates an SQLite database with the prov
 CREATE TABLE "VIN_TIV" ( "vin_id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, "vin" TEXT NOT NULL )<br>
 CREATE TABLE "TIV" ( "vin_id" INTEGER NOT NULL, "path" TEXT NOT NULL, "value" TEXT NOT NULL, FOREIGN KEY("vin_id") REFERENCES "VIN_TIV"("vin_id") )
 
-## ccs-w3c-client usage
-```
-usage: print [-h|--help] -w|--vissv2Url "<value>" [-o|--ovdsUrl "<value>"]
-             [-v|--vin "<value>"] [-p|--iterationPeriod <integer>]
-             [-a|--accessMode (get|subscribe)]
-
-             Prints provided string to stdout
-
-Arguments:
-
-  -h  --help             Print help information
-  -w  --vissv2Url        IP/URL to W3C VISS v2 server (REQUIRED)
-  -o  --ovdsUrl          IP/url to OVDS server
-  -v  --vin              VIN number. Default: ULF001
-  -p  --iterationPeriod  estimated time in msec for one roundtrip. Default: 15
-  -a  --accessMode       CCS client access-mode must be either get or
-                         subscribe.. Default: get
-```
 The server supports the methods get/set. These methods are requested by the client via HTTP POST, with a JSON payload that specifies which method is requested, and the accompanying input parameters, see examples below.
 
 

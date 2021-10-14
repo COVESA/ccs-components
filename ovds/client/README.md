@@ -1,9 +1,24 @@
 To build the CCS client
 $ go build
 
-The CCS client is then started as shown in the command line example below
+## ccs-w3c-client usage
+```
+usage: print [-h|--help] -w|--vissv2Url "<value>" [-o|--ovdsUrl "<value>"]
+             [-v|--vin "<value>"] [-p|--iterationPeriod <integer>]
+             [-a|--accessMode (get|subscribe)]
 
-$ ./client gen2-server-url ovds-server-url vin iteration-period access-mode<br>
+             Prints provided string to stdout
+
+Arguments:
+
+  -h  --help             Print help information
+  -w  --vissv2Url        IP/URL to W3C VISS v2 server (REQUIRED)
+  -o  --ovdsUrl          IP/url to OVDS server
+  -v  --vin              VIN number. Default: ULF001
+  -p  --iterationPeriod  estimated time in msec for one roundtrip. Default: 15
+  -a  --accessMode       CCS client access-mode must be either get or
+                         subscribe.. Default: get
+```
 An example could look like:<br>
 $ ./client gen2_server.w3.org 192.168.8.108 GEO001 30 subscribe
 
