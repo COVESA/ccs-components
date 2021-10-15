@@ -25,7 +25,7 @@ $ ./client gen2_server.w3.org 192.168.8.108 GEO001 30 subscribe
 The CCS client will at startup look for the file "vsspathlist.json" in its own directory, if not found there it will check its parent directory for it. 
 The latter directory is where the OVDS server will store the file after it has created it from the VSS tree file that it reads at startup. 
 
-IDepending on the access-mode, which must be either "get" or "subscribe", it will access all leaf nodes in the vsspathlist.json file from the VISSv2 server, and via the OVDS server write it to the OVDS database.
+Depending on the access-mode, which must be either "get" or "subscribe", it will access all leaf nodes in the vsspathlist.json file from the VISSv2 server, and via the OVDS server write it to the OVDS database.
 For the get access mode it tries to spread out the requests of one complete run through of all paths to be close to the iteration-period in seconds. 
 For the subscribe access mode it spreads out the subscribe requests over the iteration period. The subscriptions are time-based with a period of 3 seconds.
 
