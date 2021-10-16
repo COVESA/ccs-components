@@ -2,9 +2,9 @@
 This project contains a number of components used in the Cloud & Connected Services (CCS) project at the Connected Vehicle Systems Alliance (COVESA).
 The figure below shows an example of this technology stack, where all the components on this repo are used.
 
-![Technology stack, CCS project](Tech-stack-ccs-project.jpg?raw=true)<br>
+![Technology stack, CCS project](docs/Tech-stack-ccs-project.jpg?raw=true)<br>
 
-![Deployment Model, CCS project](VSS_CCS_Setup.png?raw=true)<br>
+![Deployment Model, CCS project](docs/VSS_CCS_Setup.png?raw=true)<br>
 
 # OVDS server/db
 The Open Vehicle Data Set database is a database schema that is well suited for storing vehicle data from multiple vehicles. 
