@@ -11,12 +11,8 @@ The Open Vehicle Data Set database is a database schema that is well suited for 
 It is here realized on an SQLite DB.<br>
 The OVDS server exposes an HTTP interface for reading from, or writing to the OVDS.
 
-# ccs-client
-The CCS client reads data from the VISSv2 server over HTTP or Websocket transports, and writes it to the OVDS via the OVDS server.
-
-# mqtt-client
-There is also an MQTT client that can read data from the VISSv2 server over MQTT, and write it to the OVDS via the OVDS server.
-This client is not shown in the figure.
+# OVDS/CCS Client
+The OVDS/CCS client reads data from the VISSv2 server over HTTP or Websocket transports, and writes it to the OVDS via the OVDS server.
 
 # VISSv2-server
 The VISSv2 server is not developed on this repo, it is found on https://github.com/MEAE-GOT/WAII.
@@ -31,9 +27,9 @@ The source of the vehicle data is an OVDS that has been populated with vehicle d
 The live simulator reads the OVDS data via an OVDS server, and writes it to a statestorage DB. 
 The timing of this read/write process is controlled by the timestamps of the data in the OVDS.
 
-# OVDS server/db
-These components are here used as the vehicle data source for the live simulator. 
-They are functionally equivalent with the OVDS server/db described earlier.<br>
+# OVDS server/db (livesim)
+This component is used as the vehicle data source for the live simulator. 
+It is functionally equivalent with the OVDS server/db described earlier.<br>
 
 For detailed information about these components, please see the README in respective directory.
 
