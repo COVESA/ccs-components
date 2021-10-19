@@ -4,7 +4,7 @@ The figure below shows an example of this technology stack, where all the compon
 
 ![Technology stack, CCS project](docs/Tech-stack-ccs-project.jpg?raw=true)<br>
 
-<br><img src="docs/VSS_CCS_Setup.png" alt="CCS Deployment Model" width="800" height="480"/><br>
+<br><img src="docs/VSS_CCS_Setup.png" alt="CCS GitHub Deployment Model" width="800" height="480"/><br>
 
 Please not that in the Git deployment model figure the same OVDS DB and server are shown representing both a cloud deployment, and a vehicle deployment.
 The Technology stack figure shows them separated, which is how it is used in the CCS project when vehicle data is simulated. In a vehicle deployment the live simulator, the OVDS server and database would be replaced by a "vehicle native" data feeder implementation. 
