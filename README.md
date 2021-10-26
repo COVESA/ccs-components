@@ -6,8 +6,10 @@ The figure below shows an example of this technology stack, where the components
 
 ![Git Deployment Model, CCS project](docs/VSS_CCS_Setup.png?raw=true)<br>
 
-Please not that in the Git deployment model figure the same OVDS DB and server are shown representing both a cloud deployment, and a vehicle deployment.
-The Technology stack figure shows them separated, which is how it is used in the CCS project when vehicle data is simulated. In a vehicle deployment the live simulator, the OVDS server and database would be replaced by a "vehicle native" data feeder implementation. 
+Please note that in the Git deployment model figure the same OVDS DB and server are shown representing both a cloud deployment, and a vehicle deployment.
+The Technology stack figure shows them separated, which is how it is used in the CCS project when vehicle data is simulated. In a vehicle deployment the live simulator, the OVDS server and database would be replaced by a "vehicle native" data feeder implementation.<br>
+The VISSv2 internal interfaces between the core server, the HTTP/WS/MQTT transport managers, and the service manager all run over the Websocket protocol, with JSON payloads as specified for the Websocket transport in the VISSv2 specification.<br>
+The statestorage interface is realized by the SQLITE queries that can be formulated to read or write single signals from/to it.
 
 # OVDS server/db
 The Open Vehicle Data Set database is a database schema that is well suited for storing vehicle data from multiple vehicles. 
