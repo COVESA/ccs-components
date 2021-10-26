@@ -35,5 +35,14 @@ When a set request contains a VIN that has not been entered into the database be
 
 CREATE TABLE TV_1 (`value` TEXT NOT NULL, `timestamp` TEXT NOT NULL, `path` TEXT)
 
-where the index 1 in the example table name above is the value in the vin_id field of the entry for this VIN in the table VIN_TIV.
+where the index 1 in the example table name above is the value in the vin_id field of the entry for this VIN in the table VIN_TIV.<br>
+
+This directory contains two OVDS databases:<br>
+- sawtooth_trip.db: Contains dummy trip data for lat/long/speed signals. The dummy data forms a sawtooth shaped curve.<br>
+- test_vehicles.db: Contains trip data from four vehicles, with multiple signals. The data has been de-identified, 
+but is otherwise authentic recordings from vehicle trips. The data was collected using curve logging. 
+The OVDS interpolator in the livesim/ovds-interpolation directory can be used to recreate a database with with eqvi-distant time periods between samples.<br>
+
+These databases can be used as input to the live simulator as it accesses it via an OVDS server. 
+The sawtooth_trip.db can e. g. be used for verifying the curve logging functionality provided by the VISSv2 server.
 
