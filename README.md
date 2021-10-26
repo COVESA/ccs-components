@@ -2,8 +2,6 @@
 This project contains a number of components used in the Cloud & Connected Services (CCS) project at the Connected Vehicle Systems Alliance (COVESA).
 The figure below shows an example of this technology stack, where the components on this repo are used.
 
-![Technology stack, CCS project](docs/Tech-stack-ccs-project.jpg?raw=true)<br>
-
 <br><img src="docs/VSS_CCS_Setup.png" alt="CCS GitHub Deployment Model" width="800" height="480"/><br>
 
 Please note that in the Git deployment model figure the same OVDS DB and server are shown representing both a cloud deployment, and a vehicle deployment.
