@@ -1,6 +1,6 @@
-# ccs-w3c-client
+# ccs-components
 This project contains a number of components used in the Cloud & Connected Services (CCS) project at the Connected Vehicle Systems Alliance (COVESA).
-The figure below shows an example of this technology stack, where all the components on this repo are used.
+The figure below shows an example of this technology stack, where the components on this repo are used.
 
 ![Technology stack, CCS project](docs/Tech-stack-ccs-project.jpg?raw=true)<br>
 
