@@ -40,7 +40,13 @@ In the CSS context it is the Feeder in the non-VSS domain that writes data into 
 The Feeder can be coded in any language, but the SQL query for writing into the database will look (more or less) the same in all languages.<br>
 A help for the coding of a Feeder query, as it looks in a Go language context, are shown below. 
 The non-VSS address space is in this example assumed to be called XXX, hence the table is named XXX_MAP.<br>
-To get the linear transformation data, and the datatype:  "SELECT scale, offset, data_type FROM XXX_MAP WHERE handle=?"<br>
-To get the signal_id associated to the non-VSS handle: "SELECT signal_id FROM XXX_MAP WHERE handle=?"<br>
-Then to write the value and timestamp: "UPDATE VSS_MAP SET value=?, timestamp=? WHERE signal_id=?"
-The timestamp should follow the ISO8601 format "YYYY-MM-DDTHH:MM:SS.ssssssZ", where the sub-second part is optional.
+To get the linear transformation data, and the datatype:<br>
+"SELECT scale, offset, data_type FROM XXX_MAP WHERE handle=?"<br>
+Then, after mapping using the data read above, to get the signal_id associated to the non-VSS handle:<br>
+"SELECT signal_id FROM XXX_MAP WHERE handle=?"<br>
+Finally to write the value and timestamp:<br>
+"UPDATE VSS_MAP SET value=?, timestamp=? WHERE signal_id=?"<br>
+The timestamp should follow the ISO8601 format "YYYY-MM-DDTHH:MM:SS.ssssssZ", where the sub-second part is optional.<br>
+In the case the feeder implements the VSS mapping without involving the XXX_MAP table, then a write query would use the VSS path explicitly:<br>
+"UPDATE VSS_MAP SET value=?, timestamp=? WHERE path=?"<br>
+without any previous reads from the DB.
