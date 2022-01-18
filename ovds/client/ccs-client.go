@@ -81,8 +81,8 @@ func getGen2Response(path string) string {
 	scheme := "http"
 	if secConfig.TransportSec == "yes" {
 		scheme = "https"
-		secPortNum, _ := strconv.Atoi(secConfig.SecPort)
-		secPort = strconv.Itoa(secPortNum + 1) // to diff from WSS portno
+		secPortNum, _ := strconv.Atoi(secConfig.HttpSecPort)
+		secPort = strconv.Itoa(secPortNum)
 	}
 	url := scheme + "://" + vissv2Url + ":" + secPort + pathToUrl(path)
 
@@ -187,7 +187,7 @@ func initVissV2WebSocket() *websocket.Conn {
 	portNum := "8080"
 	if secConfig.TransportSec == "yes" {
 		scheme = "wss"
-		portNum = secConfig.SecPort
+		portNum = secConfig.WsSecPort
 		websocket.DefaultDialer.TLSClientConfig = &tls.Config{
 			Certificates: []tls.Certificate{clientCert},
 			RootCAs:      &caCertPool,
@@ -259,7 +259,7 @@ func subscribeToPaths(conn *websocket.Conn, elements int, sleepTime int) {
 }
 
 func subscribeToPath(conn *websocket.Conn, path string) {
-	request := `{"action":"subscribe", "path":"` + path + `", "filter":{"op-type":"capture", "op-value":"time-based", "op-extra":{"period":"3"}}, "requestId": "6578"}`
+	request := `{"action":"subscribe", "path":"` + path + `", "filter":{"type":"timebased", "value":{"period":"3000"}}, "requestId": "6578"}`
 
 	err := conn.WriteMessage(websocket.TextMessage, []byte(request))
 	if err != nil {
