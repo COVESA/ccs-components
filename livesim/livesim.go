@@ -246,7 +246,7 @@ func InitDb(dbFile string) *sql.DB {
 }
 
 func writeToStatestorage(path string, value string, timestamp string) {
-	stmt, err := db.Prepare("UPDATE VSS_MAP SET value=?, timestamp=? WHERE `path`=?")
+	stmt, err := db.Prepare("UPDATE VSS_MAP SET c_value=?, c_ts=? WHERE `path`=?")
 	if (err != nil) {
 		fmt.Printf("Db prepare update failed, err=%s", err)
 		stateStorageError = true

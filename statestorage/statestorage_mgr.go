@@ -30,7 +30,7 @@ var db *sql.DB
 var dbErr error
 
 func createStaticTables() int {
-	stmt1, err := db.Prepare(`CREATE TABLE "VSS_MAP" ( "signal_id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, "path" TEXT NOT NULL, "value" TEXT, "timestamp" TEXT )`)
+	stmt1, err := db.Prepare(`CREATE TABLE "VSS_MAP" ("signal_id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, "path" TEXT NOT NULL, "c_value" TEXT, "c_ts" TEXT, "d_value" TEXT, "d_ts" TEXT)`)
 	checkErr(err)
 
 	_, err = stmt1.Exec()
@@ -391,13 +391,13 @@ func writeData(domainName string, handle string, value string) {
 	}
 	rows.Close()
 	fmt.Printf("signalId=%d\n",signalId)
-	stmt, err2 := db.Prepare("UPDATE VSS_MAP SET value=?, timestamp=? WHERE `signal_id`=?")
+	stmt, err2 := db.Prepare("UPDATE VSS_MAP SET c_value=?, c_ts=?,d_value=?, d_ts=? WHERE `signal_id`=?")  // set both current and desired datapoints
 	checkErr(err2)
 	if err2 != nil {
 		return
 	}
 
-	_, err2 = stmt.Exec(value, getRfcTime(), signalId)
+	_, err2 = stmt.Exec(value, getRfcTime(), value, getRfcTime(), signalId)  // both current and desired datapoints are set with same data
 	checkErr(err2)
 	if err2 != nil {
 		return
