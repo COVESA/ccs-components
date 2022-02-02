@@ -35,6 +35,15 @@ The linear transformation data, and the data type are meant to be used by the fe
 The datatype is also meant to be helpful information for the feeder. As data is input into he statestorage in string format, it is important for the feeder to format it correctly. Integers must not contain any decimals, or a decimal dot, while float/double must contain both.<br>
 The manager does currently not support change of already mapped signals, or removal of entire "non-VSS" mapping tables. 
 As the databae is a standard SQL database, standard SQL tools can be used for that.<br><br>
+
+The VSS_MAP table has the fields shown below.<br>
+signal_id | path | c_value | c_ts | d_value | d_ts<br>
+where c_value/c_ts is the current datapoint, and d_value/d_ts is the desired datapoint.<br>
+The reason for having both a current datapoint and a desired datapoint for the same signal is to support the VISSv2 paradigm for actuator signals, 
+where writing to an actuator sets a desired value, while reading it returns the current value.<br>
+So the server reads from the current datapoint, 
+and (for actuators) writes to the desired datapoint. On the 'southbound' side of the statestorage the feeder reads from the desired datapoint, and writes to the current datapoint.<br>
+
 The statestorage manager is not meant to be used when the database is used for transferring data from a non-VSS domain to the VSS domain. 
 In the CSS context it is the Feeder in the non-VSS domain that writes data into the database, and the Data server that reads data in the VSS domain. 
 The Feeder can be coded in any language, but the SQL query for writing into the database will look (more or less) the same in all languages.<br>
@@ -45,8 +54,9 @@ To get the linear transformation data, and the datatype:<br>
 Then, after mapping using the data read above, to get the signal_id associated to the non-VSS handle:<br>
 "SELECT signal_id FROM XXX_MAP WHERE handle=?"<br>
 Finally to write the value and timestamp:<br>
-"UPDATE VSS_MAP SET value=?, timestamp=? WHERE signal_id=?"<br>
+"UPDATE VSS_MAP SET c/d_value=?, c/d_ts=? WHERE signal_id=?"<br>
 The timestamp should follow the ISO8601 format "YYYY-MM-DDTHH:MM:SS.ssssssZ", where the sub-second part is optional.<br>
 In the case the feeder implements the VSS mapping without involving the XXX_MAP table, then a write query would use the VSS path explicitly:<br>
-"UPDATE VSS_MAP SET value=?, timestamp=? WHERE path=?"<br>
-without any previous reads from the DB.
+"UPDATE VSS_MAP SET c/d_value=?, c/d_ts=? WHERE path=?"<br>
+without any previous reads from the DB.<br>
+The c/d notion above means either c or d (current or desired), depending on whether it is performed by the server or the feeder. 
