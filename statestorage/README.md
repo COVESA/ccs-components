@@ -15,7 +15,7 @@ a new feeder handling these signals can be added. The VSS tree must then also be
 
 ### 3. Handles the access synchronization of the state storage memory
 The vehicle server and the feeders are in relation to each other asynchronous agents, which means they try to access the state storage in an asychronous manner. 
-It is the responsibility of the state storage to handle this in a way so that data qritten to it does not become corrupted. 
+It is the responsibility of the state storage to handle this in a way so that data written to it does not become corrupted. 
 
 ### 4. Supports the "state transition" of vehicle actuators
 When a vehicle actuator is set to a new value it might take some time for it to change from its current state to the new state represented by the new value. 
@@ -30,15 +30,15 @@ The state storage is currently available in two different implementations, found
 1. Based on an SQLite database
 2. Based on a Redis database
 
-The following method signatures are meant to "inspire" the implementations to become allow for simple exchange between them(here expressed in Go syntax):<br>
+The following method signatures are meant to "inspire" the implementations to allow for simple exchange between them(here expressed in Go syntax):<br>
 
 func GetDataPoint(path string) (val string, ts string)<br>
-func SetDataPoint(path string, val string, ts string) int<br>
+func SetDataPoint(path string, val string, ts string) string<br>
 
 The GetDataPoint method takes a VSS path as input, and returns the value and timestamp of that datapoint.<br>
-The SetDataPoint method takes a VSS path, and the associated value and timestamp as input, and returns an integer status.<br>
+The SetDataPoint method takes a VSS path, and the associated value and timestamp as input, and returns a status value.<br>
 
-The fact that those methods shall be able to access either the desired or current datapoint must be resolved by the respective the implementations.<br>
+The fact that those methods shall be able to access either the desired or current datapoint must be resolved by the respective implementations.<br>
 
 The state storage implementations typically also requires an initialisation request at system startup, 
 a method signature for this is likely to differ significantly between implementations, so there is no common proposal shown here, 
