@@ -50,6 +50,15 @@ and one or more feeders shall be able to implement the interactions between thes
 An example of a state storage integration into such a subsystem can be found at<br>
 <a href="https://github.com/w3c/automotive-viss2">W3C CVII VISSv2 server implementation</a>
 
+### State storage event triggering
+The data written into the state storage by an agent is at some point read by another agent. 
+If the latter agent does not receive an event signal that new data is available, then it is up to the agent to regularly check for eventual updates. 
+
+The need for event triggering is not so high for signals that are reqularly changed, if the update frequency is known by the receiving agent. 
+This agent could then poll the signal at a slightly higher frequency, and check the timestamp for if it is a duplicate. 
+For signals that are not reqularly changed an event triggering leads to a more efficient system design.<br>
+Currently the state storage implementations do not support event triggering, the agents must hence implement a polling scheme.
+
 ## Extending the state storage concept to storage of time series data
 An initiative in this direction is looked upon in this project:
 <a href="https://github.com/slawr/vss-otaku">VSS OTAKU</a>
