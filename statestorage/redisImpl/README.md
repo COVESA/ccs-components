@@ -30,12 +30,14 @@ It is the caller of the GetDataPoint(), SetDataPoint() methods to append this fo
 
 The Go files
 - redisInit.go
+- redisFlush.go
 - serverclient.go
 - feederclient.go
 
 are included to allow some initial testing before implementing Redis as state storage in a "technology stack" project. 
 After installing and configuring Redis as described above, building and running the redisInit.go will start the Redis daemon. 
-The three Go files need to be stored in separate directories before the<br>
+The redisFlush functionality is mainly for an experimentation phase where any type of data might be stored. 
+The Go files need to be stored in separate directories before the<br>
 $ go build<br>
 command is applied, or else the Go compiler will complain.<br>
 Then the serverclient and feederclient can be built, and when running them they will read and write datapoints in Redis, transferring the datapoints from one to the other. 
@@ -118,6 +120,3 @@ func initStateStorage(udsPath string) bool {
 }
 ```
 
-## Extending the state storage concept to storage of time series data
-An initiative in this direction is looked upon in this project:
-<a href="https://github.com/slawr/vss-otaku">VSS OTAKU</a>

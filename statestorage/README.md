@@ -50,3 +50,7 @@ and one or more feeders shall be able to implement the interactions between thes
 An example of a state storage integration into such a subsystem can be found at<br>
 <a href="https://github.com/w3c/automotive-viss2">W3C CVII VISSv2 server implementation</a>
 
+## Extending the state storage concept to storage of time series data
+An initiative in this direction is looked upon in this project:
+<a href="https://github.com/slawr/vss-otaku">VSS OTAKU</a>
+
