@@ -7,14 +7,14 @@ $ sudo apt-get install redis-server
 Redis clients can connect over either a TCP socket or a Unix Domain socket. TCP is default. 
 For performance and security reasons, this implementation will use the UDS alternative, which means that the redis.conf file must be updated.
 On Ubuntu this file is found at /etc/redis/redis.conf.
-To update the file, open it in an editor, and add the following rows. Preferrably close to the lines where it is described in the file, search for "unixsocket".
-unixsocket /var/tmp/vissv2/redisDB.sock
-unixsocketperm 777 
+To update the file, open it in an editor, and add the following rows. Preferrably close to the lines where it is described in the file, search for "unixsocket".<br>
+unixsocket /var/tmp/vissv2/redisDB.sock<br>
+unixsocketperm 777<br>
 
-Then comment the line
-port 6379
-and add the line
-port 0
+Then comment the line<br>
+port 6379<br>
+and add the line<br>
+port 0<br>
 for Redis to ignore the port number as it is not used in UDS.
 
 Save the file. 
@@ -35,9 +35,9 @@ The Go files
 
 are included to allow some initial testing before implementing Redis as state storage in a "technology stack" project. 
 After installing and configuring Redis as described above, building and running the redisInit.go will start the Redis daemon. 
-The three Go files need to be stored in separate directories before the
-$ go build
-command is applied, or else the Go compiler will complain.
+The three Go files need to be stored in separate directories before the<br>
+$ go build<br>
+command is applied, or else the Go compiler will complain.<br>
 Then the serverclient and feederclient can be built, and when running them they will read and write datapoints in Redis, transferring the datapoints from one to the other. 
 
 ## Implementation of the getDataPoint() method

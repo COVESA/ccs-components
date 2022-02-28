@@ -72,7 +72,7 @@ The c/d notion above means either c or d (current or desired), depending on whet
 ## Implementation of the getDataPoint() method
 The implementations to be used by the server and the feeder(s) differ on the SQLite statement. In the following code template the feeder statement is commented out. 
 To use this in a feeder, uncomment and instead comment the not commented SQLite statement.<br>
-<code>
+```
 import  _ "github.com/mattn/go-sqlite3"
 
 func GetDataPoint(path string) (string, string) {
@@ -91,12 +91,12 @@ func GetDataPoint(path string) (string, string) {
 	}
 	return value, timestamp
 }
-</code>
+```
 
 ## Implementation of the method setDataPoint() method
 The implementations to be used by the server and the feeder(s) differ on the SQLite statement. In the following code template the feeder statement is commented out. 
 To use this in a feeder, uncomment and instead comment the not commented SQLite statement.<br>
-<code>
+```
 import  _ "github.com/mattn/go-sqlite3"
 
 func SetDataPoint(path string, val string, ts string) string {
@@ -113,11 +113,11 @@ func SetDataPoint(path string, val string, ts string) string {
 	}
 	return ts
 }
-</code>
+```
 
 ## Implementation of the initStateStorage() method
 
-<code>
+```
 import  _ "github.com/mattn/go-sqlite3"
 
 func initStateStorage(dbPath string) *sql.DB {
@@ -127,5 +127,5 @@ func initStateStorage(dbPath string) *sql.DB {
 		}
 		return db
 }
-</code>
+```
 

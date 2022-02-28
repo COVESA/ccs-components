@@ -25,7 +25,8 @@ one "desired datapoint", and one "current datapoint". A client request for a new
 and the subsequent state changes over a period of time is written to the current datapoint by the feeder. The client can hence follow the state change by reading the actuator value, 
 which is then obtained by the server from the current datapoint.<br>
 
-The state storage is currently available in two different implementations, founf in respective subdirectory:<br>
+### State storage implementations
+The state storage is currently available in two different implementations, found in respective subdirectory:<br>
 1. Based on an SQLite database
 2. Based on a Redis database
 
@@ -41,7 +42,8 @@ The fact that those methods shall be able to access either the desired or curren
 
 The state storage implementations typically also requires an initialisation request at system startup, 
 a method signature for this is likely to differ significantly between implementations, so there is no common proposal shown here, 
-but it is expected that an implementation example is shown in the respective implementation subdirectories.<br>
+but it is expected that an implementation example is shown in the respective implementation subdirectories. 
+The initialisation might require root privileges. <br>
 
 The respective implementation directories shall contain sufficient information so that a developer of a system including a vehicle server, a state storage, 
 and one or more feeders shall be able to implement the interactions between these components.<br>
