@@ -18,12 +18,15 @@ import (
     "time"
     "fmt"
     
+    "github.com/akamensky/argparse"
     "database/sql"
     _ "github.com/mattn/go-sqlite3"
+    "github.com/go-redis/redis"
 )
 
 var db *sql.DB
 var stateStorageError bool = false
+var redisClient *redis.Client
 
 
 type PathList struct {
@@ -51,6 +54,7 @@ var sampleList SampleList
 var vehicleVin string
 var ovdsUrl string
 var statestorageFname string
+var stateDbType string
 
 const RINGSIZE = 25
 type RingElement struct {
@@ -246,20 +250,33 @@ func InitDb(dbFile string) *sql.DB {
 }
 
 func writeToStatestorage(path string, value string, timestamp string) {
-	stmt, err := db.Prepare("UPDATE VSS_MAP SET c_value=?, c_ts=? WHERE `path`=?")
-	if (err != nil) {
-		fmt.Printf("Db prepare update failed, err=%s", err)
-		stateStorageError = true
-		return
-	}
+	switch stateDbType {
+	    case "sqlite":
+		stmt, err := db.Prepare("UPDATE VSS_MAP SET c_value=?, c_ts=? WHERE `path`=?")
+		if (err != nil) {
+		    fmt.Printf("Db prepare update failed, err=%s", err)
+		    stateStorageError = true
+		    return
+		}
 
-	_, err = stmt.Exec(value, timestamp, path)
-	if err != nil {
-		fmt.Printf("Db exec update failed, err=%s", err)
-		stateStorageError = true
-		return
+		_, err = stmt.Exec(value, timestamp, path)
+		if err != nil {
+		    fmt.Printf("Db exec update failed, err=%s", err)
+		    stateStorageError = true
+		    return
+		}
+        	fmt.Printf("writeToStatestorage:  value=%s, ts=%s, path=%s\n", value, timestamp, path)
+	    case "redis":
+		dp := `{"val":"` + value + `", "ts":"` + timestamp + `"}`
+		err := redisClient.Set(path, dp, time.Duration(0)).Err()
+		if err != nil {
+		   fmt.Printf("Could not update statestorage. Err=%s\n",err)
+		    return
+		} else {
+//		    fmt.Println("Datapoint=%s\n", dp)
+		    return
+		}
 	}
-        fmt.Printf("writeToStatestorage:  value=%s, ts=%s, path=%s\n", value, timestamp, path)
 }
 
 func pushRingSamples(ringArray []RingBuffer, numOfPaths int, currentTime time.Time) int {
@@ -281,15 +298,47 @@ func pushRingSamples(ringArray []RingBuffer, numOfPaths int, currentTime time.Ti
 }
 
 func main() {
-    if len(os.Args) != 4 {
-        fmt.Printf("livesim command line: ./livesim VIN OVDS-server-url statestorage-db-filename\n")
-	os.Exit(1)
-    }
-    fmt.Printf("Remember to start the OVDS server to run with livesim.\n")
-    vehicleVin = os.Args[1]
-    ovdsUrl = os.Args[2]
-    statestorageFname = os.Args[3]
-    db = InitDb(statestorageFname)
+	// Create new parser object
+	parser := argparse.NewParser("print", "Prints provided string to stdout")
+
+	// Create flags
+	url_ovds := parser.String("o", "ovdsUrl", &argparse.Options{Required: true, Help: "IP/url to OVDS server"})
+	vin := parser.String("v", "vin", &argparse.Options{Required: true, Help: "VIN from OVDS DB"})
+	ssPath := parser.String("p", "dbPath", &argparse.Options{Required: false, Help: "Path and name of state storage SQLite DB file."})
+	ssImpl := parser.Selector("i", "dbImpl", []string{"sqlite", "redis"}, &argparse.Options{Required: false, 
+	                        Help: "Database impl must be either sqlite or redis", Default:"sqlite"})
+
+	// Parse input
+	err := parser.Parse(os.Args)
+	if err != nil {
+		fmt.Print(parser.Usage(err))
+		//exits due to required info not provided by user
+		os.Exit(1)
+	}
+
+	//conversion since parsed flags are of *string type and not string
+	ovdsUrl = *url_ovds
+	vehicleVin = *vin
+	stateDbType = *ssImpl
+	statestorageFname = *ssPath
+
+	switch stateDbType {
+	    case "sqlite":
+		db = InitDb(statestorageFname)
+	    case "redis":
+		redisClient = redis.NewClient(&redis.Options{
+		    Network:  "unix",
+		    Addr:     "/var/tmp/vissv2/redisDB.sock",
+		    Password: "",
+		    DB:       1,
+		})
+		err := redisClient.Ping().Err()
+		if err != nil {
+			fmt.Printf("Could not initialise redis DB, err = %s", err)
+			os.Exit(1)
+		}
+	}
+
     numOfPaths := createPathList("vsspathlist.json")
     initTimeStamps(numOfPaths)
     InitRingArray(numOfPaths)
