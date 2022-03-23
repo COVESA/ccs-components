@@ -20,12 +20,14 @@ Arguments:<br>
   -p  --dbPath   Path and name of state storage SQLite DB file<br>
   -i  --dbImpl   Database impl must be either sqlite or redis. Default: sqlite<br>
 
-The OVDS server URL/IP address, and the VIN, are mandatory. If the sqlite state storage implementation is selected (default), 
-then the path and name of the SQLite DB file must be provided.
+The OVDS server URL/IP address, and the VIN, are mandatory.<br>
+If the SQLite state storage implementation is selected (default), then the path and name of the SQLite DB file must be provided.<br>
+If the Redis state storage implementation is selected, then the Redis DB must be initiated, see the 
+<a href="https://github.com/w3c/automotive-viss2/tree/master/server/service_mgr">VISSv2 service manager README</a>.
 
 If the live simulator is used together with the VISSv2 server, and that server is configured to run using an SQLite state storage implementation, 
 then the VISSv2 server retrieves data from a database file named statestorage.db if it finds it in its deployment directory,<br>
-see the <a href="https://github.com/MEAE-GOT/W3C_VehicleSignalInterfaceImpl/tree/master/server/service_mgr">VISSv2 service manager README</a>.
+see the <a href="https://github.com/w3c/automotive-viss2/tree/master/server/service_mgr">VISSv2 service manager README</a>.
 
 So if livesim writes to the state storage used by the VISSv2 server, a VISSv2 client can access simulated "live" data coming from recorded data in the OVDS database that livesim reads from.
 The OVDS server that livesim reads from must be started with the extra command parameter "livesim" to listen to listen for its requests.
