@@ -36,13 +36,19 @@ func createStaticTables() int {
 	_, err = stmt1.Exec()
 	checkErr(err)
 
+	stmt2, err2 := db.Prepare(`CREATE UNIQUE INDEX "idx_path" ON "VSS_MAP" ("path")`)
+       checkErr(err2)
+
+	_, err2 = stmt2.Exec()
+	checkErr(err2)
+
 /*        stmt2, err2 := db.Prepare(`CREATE TABLE "NATIVE_VALUE" ( "signal_id" INTEGER NOT NULL, "int_value" INTEGER, "float_value" FLOAT, "boolean_value" BOOLEAN, FOREIGN KEY("signal_id") REFERENCES "VSS_MAP"("signal_id") )`)
         checkErr(err2)
 
 	_, err2 = stmt2.Exec()
 	checkErr(err2)*/
 
-	if err != nil /*|| err2 != nil*/ {
+	if err != nil || err2 != nil {
 		return -1
 	}
 	return 0
