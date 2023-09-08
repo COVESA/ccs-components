@@ -3,6 +3,33 @@
 ### Install Redis on Ubuntu
 $ sudo apt-get install redis-server
 
+### Install Redis on Mac(M1)
+
+Install using homebrew:
+```
+brew install redis
+```
+
+Finding the config file:
+```
+redis-cli INFO | grep config_file
+```
+
+Do the modification stated below in the config file to enable unix socket communication.
+Setting the db adress to /var/tmp/vissv2/redisDb.sock:
+```
+mkdir /var/tmp/vissv2
+touch redisDB.sock
+```
+
+Test the installation:
+
+```
+redis-server
+redis-cli ping
+```
+
+
 ### Configure Redis
 Redis clients can connect over either a TCP socket or a Unix Domain socket. TCP is default. 
 For performance and security reasons, this implementation will use the UDS alternative, which means that the redis.conf file must be updated.
