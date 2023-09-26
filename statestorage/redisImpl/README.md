@@ -44,7 +44,24 @@ and add the line<br>
 port 0<br>
 for Redis to ignore the port number as it is not used in UDS.
 
-Save the file. 
+Save the file.
+
+If the socketfile and the directory it resides in does not exist then create it.
+```
+mkdir /var/tmp/vissv2
+touch redisDB.sock
+```
+
+### Start the daemon
+The redisInit.go will start and configure the Redis daemon. To build and run it:
+```
+go build
+./redisInit
+```
+On Ubuntu it is necessary to have superuser privilege, which can be achieved by prepending the run command with "sudo".
+
+A status log in the terminal will tell whether it succeeded or not.
+
 
 ### Current vs Desired datapoints in the state storage
 The implementation of the Current and Desired datapoints has the following design.
