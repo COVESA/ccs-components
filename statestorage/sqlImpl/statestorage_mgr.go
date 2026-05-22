@@ -11,6 +11,7 @@ package main
 import (
     "io/ioutil"
     "os"
+    "regexp"
     "strings"
     "strconv"
     "encoding/json"
@@ -20,6 +21,12 @@ import (
     "fmt"
     _ "github.com/mattn/go-sqlite3"
 )
+
+var validDomainName = regexp.MustCompile(`^[A-Za-z0-9_]+$`)
+
+func checkDomainName(name string) bool {
+    return validDomainName.MatchString(name)
+}
 type PathList struct {
 	LeafPaths []string
 }
@@ -256,6 +263,10 @@ func populateProprietary() {
     var domainName, command, vssPath string
     fmt.Printf("Name of non-VSS domain:")
     fmt.Scanf("%s", &domainName)
+    if !checkDomainName(domainName) {
+        fmt.Printf("Error: domain name must contain only letters, digits, and underscores.\n")
+        os.Exit(1)
+    }
     if (!domainTableExists(domainName)) {
         createDomainTable(domainName)
     }
