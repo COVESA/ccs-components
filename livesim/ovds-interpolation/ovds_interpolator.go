@@ -205,6 +205,7 @@ func readDataPoint(path string, fromTs string) (string, string) {
 		fmt.Printf("readDataPoint: Error in issuing request/response= %s ", err)
 		return "", ""
 	}
+	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
